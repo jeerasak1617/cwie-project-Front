@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, UserPlus, X } from 'lucide-react';
 import api from '../../api';
 
 interface Student {
@@ -13,9 +13,19 @@ interface Student {
     status_id: number | null;
     start_date: string | null;
     end_date: string | null;
-    // Computed in frontend
     hasEvaluation?: boolean;
     visitCount?: number;
+}
+
+interface UnassignedStudent {
+    internship_id: number;
+    student_id: number;
+    student_code: string;
+    full_name: string;
+    email: string;
+    department_id: number | null;
+    company_id: number | null;
+    start_date: string | null;
 }
 
 const StudentManagementPage = () => {
@@ -23,36 +33,72 @@ const StudentManagementPage = () => {
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [studRes, evalRes, visitRes] = await Promise.all([
-                    api.get('/advisor/students'),
-                    api.get('/advisor/evaluations'),
-                    api.get('/advisor/visit-reports'),
-                ]);
+    // Modal state
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [unassigned, setUnassigned] = useState<UnassignedStudent[]>([]);
+    const [loadingUnassigned, setLoadingUnassigned] = useState(false);
+    const [assigning, setAssigning] = useState<number | null>(null);
 
-                const evaluatedSet = new Set((evalRes.data.evaluations || []).map((e: any) => e.internship_id));
-                const visitCounts: Record<number, number> = {};
-                (visitRes.data.reports || []).forEach((v: any) => {
-                    visitCounts[v.internship_id] = (visitCounts[v.internship_id] || 0) + 1;
-                });
+    const fetchStudents = async () => {
+        try {
+            const [studRes, evalRes, visitRes] = await Promise.all([
+                api.get('/advisor/students'),
+                api.get('/advisor/evaluations'),
+                api.get('/advisor/visit-reports'),
+            ]);
 
-                const enriched = (studRes.data.students || []).map((s: any) => ({
-                    ...s,
-                    hasEvaluation: evaluatedSet.has(s.internship_id),
-                    visitCount: visitCounts[s.internship_id] || 0,
-                }));
+            const evaluatedSet = new Set((evalRes.data.evaluations || []).map((e: any) => e.internship_id));
+            const visitCounts: Record<number, number> = {};
+            (visitRes.data.reports || []).forEach((v: any) => {
+                visitCounts[v.internship_id] = (visitCounts[v.internship_id] || 0) + 1;
+            });
 
-                setStudents(enriched);
-            } catch (err) {
-                console.error('Failed to fetch students:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, []);
+            const enriched = (studRes.data.students || []).map((s: any) => ({
+                ...s,
+                hasEvaluation: evaluatedSet.has(s.internship_id),
+                visitCount: visitCounts[s.internship_id] || 0,
+            }));
+
+            setStudents(enriched);
+        } catch (err) {
+            console.error('Failed to fetch students:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchStudents(); }, []);
+
+    const fetchUnassigned = async () => {
+        setLoadingUnassigned(true);
+        try {
+            const { data } = await api.get('/advisor/unassigned-students');
+            setUnassigned(data.students || []);
+        } catch (err) {
+            console.error('Failed to fetch unassigned:', err);
+        } finally {
+            setLoadingUnassigned(false);
+        }
+    };
+
+    const handleOpenAddModal = () => {
+        setShowAddModal(true);
+        fetchUnassigned();
+    };
+
+    const handleAssign = async (internshipId: number) => {
+        setAssigning(internshipId);
+        try {
+            await api.post('/advisor/assign-student', null, { params: { internship_id: internshipId } });
+            // Refresh both lists
+            await fetchUnassigned();
+            await fetchStudents();
+        } catch (err: any) {
+            alert(err.response?.data?.detail || 'ไม่สามารถเพิ่มนักศึกษาได้');
+        } finally {
+            setAssigning(null);
+        }
+    };
 
     const filtered = students.filter(s =>
         s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -73,10 +119,20 @@ const StudentManagementPage = () => {
                         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">จัดการนักศึกษา</h1>
                         <p className="text-gray-500 text-lg">เลือกชื่อนักศึกษาเพื่อเข้าสู่หน้าบันทึกการนิเทศผลรายบุคคล</p>
                     </div>
-                    <div className="bg-blue-50 text-[#032B68] px-8 py-3 rounded-2xl text-base font-bold shadow-sm border border-blue-100 flex items-center gap-2">
-                        <span>ทั้งหมด {students.length} คน</span>
-                        <div className="w-1 h-1 bg-gray-300 rounded-full mx-2"></div>
-                        <span>ยังไม่นิเทศ <span className="text-red-500">{notSupervised} คน</span></span>
+                    <div className="flex items-center gap-4">
+                        {/* ปุ่มเพิ่มนักศึกษา */}
+                        <button
+                            onClick={handleOpenAddModal}
+                            className="flex items-center gap-2 px-6 py-3 bg-[#5DC139] hover:bg-[#4ea82e] text-white font-bold rounded-2xl shadow-md transition-all active:scale-95"
+                        >
+                            <UserPlus size={20} />
+                            เพิ่มนักศึกษา
+                        </button>
+                        <div className="bg-blue-50 text-[#032B68] px-8 py-3 rounded-2xl text-base font-bold shadow-sm border border-blue-100 flex items-center gap-2">
+                            <span>ทั้งหมด {students.length} คน</span>
+                            <div className="w-1 h-1 bg-gray-300 rounded-full mx-2"></div>
+                            <span>ยังไม่นิเทศ <span className="text-red-500">{notSupervised} คน</span></span>
+                        </div>
                     </div>
                 </div>
 
@@ -94,18 +150,14 @@ const StudentManagementPage = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="relative min-w-[240px] w-full md:w-auto">
-                            <button className="w-full flex items-center justify-between px-6 py-4 border border-gray-200 rounded-2xl bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 font-bold text-lg shadow-sm">
-                                สถานะทั้งหมด
-                                <ChevronDown className="h-5 w-5 text-gray-400 ml-2" />
-                            </button>
-                        </div>
                     </div>
                 </div>
 
                 <div className="space-y-6">
                     {filtered.length === 0 && (
-                        <div className="text-center py-12 text-gray-400">ไม่พบนักศึกษา</div>
+                        <div className="text-center py-12 text-gray-400">
+                            {students.length === 0 ? 'ยังไม่มีนักศึกษาในรายชื่อ กดปุ่ม "เพิ่มนักศึกษา" เพื่อเลือกนักศึกษาที่จะดูแล' : 'ไม่พบนักศึกษาที่ค้นหา'}
+                        </div>
                     )}
                     {filtered.map((student) => {
                         const hasVisit = (student.visitCount ?? 0) > 0;
@@ -175,6 +227,61 @@ const StudentManagementPage = () => {
                     })}
                 </div>
             </div>
+
+            {/* ===== Modal เพิ่มนักศึกษา ===== */}
+            {showAddModal && (
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowAddModal(false)}>
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-[#4472c4] to-[#032B68] px-8 py-6 text-white flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold">เพิ่มนักศึกษาที่ดูแล</h2>
+                                <p className="text-white/70 text-sm mt-1">เลือกนักศึกษาที่ยังไม่มีอาจารย์ที่ปรึกษา</p>
+                            </div>
+                            <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 overflow-y-auto max-h-[60vh]">
+                            {loadingUnassigned ? (
+                                <div className="text-center py-12 text-gray-400">กำลังโหลดรายชื่อ...</div>
+                            ) : unassigned.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                        <UserPlus size={28} className="text-green-500" />
+                                    </div>
+                                    <p className="text-gray-500 font-medium">ไม่มีนักศึกษาที่รอ assign</p>
+                                    <p className="text-gray-400 text-sm mt-1">นักศึกษาทุกคนมีอาจารย์ดูแลแล้ว</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {unassigned.map((s) => (
+                                        <div key={s.internship_id} className="flex items-center justify-between p-5 bg-gray-50 hover:bg-blue-50/50 rounded-2xl border border-gray-100 transition-colors">
+                                            <div>
+                                                <h3 className="font-bold text-gray-900 text-lg">{s.student_code} {s.full_name}</h3>
+                                                <p className="text-sm text-gray-500 mt-1">
+                                                    {s.email || '-'}
+                                                    {s.start_date && ` • เริ่ม ${new Date(s.start_date).toLocaleDateString('th-TH')}`}
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleAssign(s.internship_id)}
+                                                disabled={assigning === s.internship_id}
+                                                className="px-5 py-2.5 bg-[#4472c4] hover:bg-[#365fa3] text-white font-bold rounded-xl shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                            >
+                                                <UserPlus size={16} />
+                                                {assigning === s.internship_id ? 'กำลังเพิ่ม...' : 'เลือก'}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

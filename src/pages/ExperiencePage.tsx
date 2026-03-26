@@ -66,6 +66,15 @@ const ExperiencePage = () => {
                 const advs = Array.isArray(advRes.data) ? advRes.data : advRes.data.advisors || [];
                 setAdvisors(advs);
                 setFilteredAdvisors(advs);
+
+                // ดึงชื่ออาจารย์ที่ assign ให้นักศึกษาคนนี้ (read-only)
+                const advId = p.advisor_user_id || internRes.data?.user_adv_id;
+                if (advId && advs.length > 0) {
+                    const myAdv = advs.find((a: any) => a.id === advId);
+                    if (myAdv) {
+                        setAdvisorName(`${myAdv.prefix_th || ''} ${myAdv.first_name_th} ${myAdv.last_name_th}`.trim());
+                    }
+                }
             } catch (e) {
                 console.error(e);
             } finally {
@@ -94,15 +103,8 @@ const ExperiencePage = () => {
         setSaving(true);
         setMessage('');
         try {
-            // หา advisor id จากชื่อที่เลือก
-            const selectedAdvisor = advisors.find((a: any) =>
-                `${a.prefix_th || ''} ${a.first_name_th} ${a.last_name_th}`.trim() === advisorName ||
-                `${a.first_name_th} ${a.last_name_th}` === advisorName
-            );
-
             await api.put('/student/internship-info', null, {
                 params: {
-                    advisor_user_id: selectedAdvisor?.id || undefined,
                     supervisor_name: supervisorName || undefined,
                     supervisor_position: supervisorPosition || undefined,
                     company_name: workplaceName || undefined,
@@ -188,13 +190,14 @@ const ExperiencePage = () => {
                                     </div>
                                 </div>
 
-                                {/* Row 3: Advisor - filtered by department */}
+                                {/* Row 3: Advisor - READ ONLY (กำหนดโดยอาจารย์) */}
                                 <div>
-                                    <label className="block text-base font-bold text-gray-900 mb-2">ชื่ออาจารย์ที่ปรึกษา {major && <span className="text-sm text-blue-500 font-normal">({major})</span>}</label>
-                                    <CustomDropdown
-                                        value={advisorName || 'ชื่ออาจารย์ที่ปรึกษา'}
-                                        onChange={setAdvisorName}
-                                        options={filteredAdvisors.map((a: any) => `${a.prefix_th || ''} ${a.first_name_th} ${a.last_name_th}`.trim())}
+                                    <label className="block text-base font-bold text-gray-900 mb-2">ชื่ออาจารย์ที่ปรึกษา <span className="text-sm text-blue-500 font-normal">(กำหนดโดยอาจารย์)</span></label>
+                                    <input
+                                        type="text"
+                                        value={advisorName || 'ยังไม่มีอาจารย์ที่ปรึกษา - รออาจารย์เลือกนักศึกษา'}
+                                        disabled
+                                        className={`w-full px-5 py-3 rounded-full border font-medium text-base ${advisorName ? 'border-green-200 text-green-700 bg-green-50' : 'border-orange-200 text-orange-500 bg-orange-50'}`}
                                     />
                                 </div>
 
