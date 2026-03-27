@@ -1,52 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { CircleUserRound, Menu, X, ChevronRight, LogOut } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import logoUniversity from '../../assets/logo-university.png';
 import logoScience from '../../assets/logo-science.png';
 import logoWie from '../../assets/1765445181194.png';
 
-interface UserProfile {
-    name: string;
-    role?: string;
-}
-
 const Header = () => {
     const location = useLocation();
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const navigate = useNavigate();
+    const { user, logout: authLogout } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const isTeacherSection = location.pathname.startsWith('/teacher');
 
-    useEffect(() => {
-        const fetchProfile = async () => {
-            try {
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                if (isTeacherSection) {
-                    setUserProfile({
-                        name: "อาจารย์สมชาย", // Mock Teacher Name
-                        role: "teacher"
-                    });
-                } else if (location.pathname.toLowerCase().startsWith('/company')) {
-                    setUserProfile({
-                        name: "บริษัทตัวอย่าง",
-                        role: "company"
-                    });
-                } else {
-                    setUserProfile({
-                        name: "จีรศักดิ์",
-                        role: "student"
-                    });
-                }
-            } catch (error) {
-                console.error("Failed to fetch user profile", error);
-                setUserProfile({ name: "Guest" });
-            }
-        };
-
-        fetchProfile();
-    }, [location.pathname, isTeacherSection]);
+    // สร้างชื่อแสดงจาก user จริง
+    const displayName = user?.full_name || user?.first_name_th || user?.email || 'ผู้ใช้งาน';
+    const userRole = user?.sys_role || '';
 
     // Close menu on route change
     useEffect(() => {
@@ -83,17 +53,19 @@ const Header = () => {
 
     const isCompanySection = location.pathname.toLowerCase().startsWith('/company');
     const isAdminSection = location.pathname.startsWith('/admin');
-    const showLogoutInNav = isTeacherSection || isCompanySection;
+    const showLogoutInNav = true; // แสดงปุ่ม logout ให้ทุก role
 
     const handleLogout = () => {
         setShowLogoutModal(false);
+        authLogout();
         navigate('/login');
     };
 
+    // เลือก menu ตาม role ของ user จริง
     let menuItems = studentMenuItems;
-    if (isTeacherSection) {
+    if (userRole === 'advisor' || isTeacherSection) {
         menuItems = teacherMenuItems;
-    } else if (isCompanySection) {
+    } else if (userRole === 'supervisor' || isCompanySection) {
         menuItems = companyMenuItems;
     }
 
@@ -185,10 +157,10 @@ const Header = () => {
                                 className="flex-1 flex items-center justify-center gap-2 cursor-pointer hover:text-[#ffd700] py-2 rounded-lg transition-colors text-lg md:text-xl"
                             >
                                 <CircleUserRound size={24} strokeWidth={1.5} />
-                                <span className="font-medium whitespace-nowrap">{userProfile ? userProfile.name : "..."}</span>
+                                <span className="font-medium whitespace-nowrap">{displayName}</span>
                             </Link>
 
-                            {/* Logout Button (Teacher & Company) */}
+                            {/* Logout Button */}
                             {showLogoutInNav && (
                                 <button
                                     onClick={() => setShowLogoutModal(true)}
@@ -241,7 +213,7 @@ const Header = () => {
                                         <div className="text-[#032B68]">
                                             <CircleUserRound size={24} />
                                         </div>
-                                        <span className="text-base font-bold text-[#032B68]">{userProfile ? userProfile.name : "..."}</span>
+                                        <span className="text-base font-bold text-[#032B68]">{displayName}</span>
                                     </div>
                                     <ChevronRight size={18} className="text-gray-400" />
                                 </Link>

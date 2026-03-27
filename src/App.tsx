@@ -1,7 +1,9 @@
 import { Routes, Route } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
+import PrivateRoute from './components/PrivateRoute';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
+import LineCallbackPage from './pages/LineCallbackPage';
 import RoleSelectionPage from './pages/RoleSelectionPage';
 import TimeAttendancePage from './pages/TimeAttendancePage';
 import ExperiencePage from './pages/ExperiencePage';
@@ -42,55 +44,105 @@ import AdminUserManagementPage from './pages/admin/AdminUserManagementPage';
 function App() {
     return (
         <Routes>
+            {/* === Public Routes (ไม่ต้อง login) === */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/line/callback" element={<LineCallbackPage />} />
             <Route path="/select-role" element={<RoleSelectionPage />} />
             <Route path="/register/student" element={<StudentRegistrationPage />} />
             <Route path="/register/teacher" element={<TeacherRegistrationPage />} />
             <Route path="/register/mentor" element={<MentorRegistrationPage />} />
             <Route path="/pending-approval" element={<PendingApprovalPage />} />
 
+            {/* === Protected Routes (ต้อง login) === */}
             <Route path="/*" element={
-                <MainLayout>
-                    <Routes>
-                        <Route path="/" element={<HomePage />} />
-                        <Route path="/time-attendance" element={<TimeAttendancePage />} />
-                        <Route path="/experience" element={<ExperiencePage />} />
-                        <Route path="/daily-log" element={<DailyLogPage />} />
-                        <Route path="/internship-plan" element={<InternshipPlanPage />} />
-                        <Route path="/profile/*" element={<ProfilePage />} />
-                        <Route path="/history" element={<HistoryPage />} />
-                        <Route path="/internship-plan-history" element={<InternshipPlanHistoryPage />} />
-                        <Route path="/daily-log-history" element={<DailyLogHistoryPage />} />
-                        <Route path="/teacher" element={<TeacherDashboardPage />} />
-                        <Route path="/teacher/schedule" element={<ScheduleSupervisionPage />} />
-                        <Route path="/teacher/history" element={<SupervisionHistoryPage />} />
-                        <Route path="/teacher/students" element={<StudentManagementPage />} />
-                        <Route path="/teacher/profile" element={<TeacherProfilePage />} />
-                        <Route path="/teacher/supervision/:studentId" element={<SupervisionRecordPage />} />
-                        <Route path="/teacher/evaluation/:studentId" element={<EvaluationPage />} />
-                        <Route path="/company" element={<CompanyLayout />}>
-                            <Route index element={<CompanyDashboardPage />} />
-                            <Route path="evaluation" element={<CompanyEvaluationPage />} />
-                            <Route path="signatures" element={<CompanySignaturesPage />} />
-                            <Route path="signatures/:studentId" element={<CompanySignatureLayout />}>
-                                <Route index element={<CompanyVerifyDailyHistoryPage />} />
-                                <Route path="daily" element={<CompanyVerifyDailyHistoryPage />} />
-                                <Route path="experience" element={<CompanyVerifyExperiencePage />} />
-                                <Route path="history" element={<CompanyVerifyAttendanceHistoryPage />} />
+                <PrivateRoute>
+                    <MainLayout>
+                        <Routes>
+                            {/* หน้าหลัก - ทุก role เข้าได้ */}
+                            <Route path="/" element={<HomePage />} />
+
+                            {/* === นักศึกษา === */}
+                            <Route path="/time-attendance" element={
+                                <PrivateRoute roles={['student']}><TimeAttendancePage /></PrivateRoute>
+                            } />
+                            <Route path="/experience" element={
+                                <PrivateRoute roles={['student']}><ExperiencePage /></PrivateRoute>
+                            } />
+                            <Route path="/daily-log" element={
+                                <PrivateRoute roles={['student']}><DailyLogPage /></PrivateRoute>
+                            } />
+                            <Route path="/internship-plan" element={
+                                <PrivateRoute roles={['student']}><InternshipPlanPage /></PrivateRoute>
+                            } />
+                            <Route path="/profile/*" element={
+                                <PrivateRoute roles={['student']}><ProfilePage /></PrivateRoute>
+                            } />
+                            <Route path="/history" element={
+                                <PrivateRoute roles={['student']}><HistoryPage /></PrivateRoute>
+                            } />
+                            <Route path="/internship-plan-history" element={
+                                <PrivateRoute roles={['student']}><InternshipPlanHistoryPage /></PrivateRoute>
+                            } />
+                            <Route path="/daily-log-history" element={
+                                <PrivateRoute roles={['student']}><DailyLogHistoryPage /></PrivateRoute>
+                            } />
+
+                            {/* === อาจารย์นิเทศก์ === */}
+                            <Route path="/teacher" element={
+                                <PrivateRoute roles={['advisor']}><TeacherDashboardPage /></PrivateRoute>
+                            } />
+                            <Route path="/teacher/schedule" element={
+                                <PrivateRoute roles={['advisor']}><ScheduleSupervisionPage /></PrivateRoute>
+                            } />
+                            <Route path="/teacher/history" element={
+                                <PrivateRoute roles={['advisor']}><SupervisionHistoryPage /></PrivateRoute>
+                            } />
+                            <Route path="/teacher/students" element={
+                                <PrivateRoute roles={['advisor']}><StudentManagementPage /></PrivateRoute>
+                            } />
+                            <Route path="/teacher/profile" element={
+                                <PrivateRoute roles={['advisor']}><TeacherProfilePage /></PrivateRoute>
+                            } />
+                            <Route path="/teacher/supervision/:studentId" element={
+                                <PrivateRoute roles={['advisor']}><SupervisionRecordPage /></PrivateRoute>
+                            } />
+                            <Route path="/teacher/evaluation/:studentId" element={
+                                <PrivateRoute roles={['advisor']}><EvaluationPage /></PrivateRoute>
+                            } />
+                            <Route path="/teacher/verify/:studentId" element={
+                                <PrivateRoute roles={['advisor']}><TeacherSignatureLayout /></PrivateRoute>
+                            }>
+                                <Route path="daily" element={<TeacherVerifyDailyHistoryPage />} />
+                                <Route path="experience" element={<TeacherVerifyExperiencePage />} />
                             </Route>
-                            <Route path="profile" element={<CompanyProfilePage />} />
-                            <Route path="evaluation/:studentId" element={<CompanyEvaluationDetailPage />} />
-                        </Route>
-                        <Route path="/admin" element={<AdminLayout />}>
-                            <Route index element={<AdminDashboardPage />} />
-                            <Route path="users" element={<AdminUserManagementPage />} />
-                        </Route>
-                        <Route path="/teacher/verify/:studentId" element={<TeacherSignatureLayout />}>
-                            <Route path="daily" element={<TeacherVerifyDailyHistoryPage />} />
-                            <Route path="experience" element={<TeacherVerifyExperiencePage />} />
-                        </Route>
-                    </Routes>
-                </MainLayout>
+
+                            {/* === พี่เลี้ยง/สถานประกอบการ === */}
+                            <Route path="/company" element={
+                                <PrivateRoute roles={['supervisor']}><CompanyLayout /></PrivateRoute>
+                            }>
+                                <Route index element={<CompanyDashboardPage />} />
+                                <Route path="evaluation" element={<CompanyEvaluationPage />} />
+                                <Route path="signatures" element={<CompanySignaturesPage />} />
+                                <Route path="signatures/:studentId" element={<CompanySignatureLayout />}>
+                                    <Route index element={<CompanyVerifyDailyHistoryPage />} />
+                                    <Route path="daily" element={<CompanyVerifyDailyHistoryPage />} />
+                                    <Route path="experience" element={<CompanyVerifyExperiencePage />} />
+                                    <Route path="history" element={<CompanyVerifyAttendanceHistoryPage />} />
+                                </Route>
+                                <Route path="profile" element={<CompanyProfilePage />} />
+                                <Route path="evaluation/:studentId" element={<CompanyEvaluationDetailPage />} />
+                            </Route>
+
+                            {/* === Admin === */}
+                            <Route path="/admin" element={
+                                <PrivateRoute roles={['admin']}><AdminLayout /></PrivateRoute>
+                            }>
+                                <Route index element={<AdminDashboardPage />} />
+                                <Route path="users" element={<AdminUserManagementPage />} />
+                            </Route>
+                        </Routes>
+                    </MainLayout>
+                </PrivateRoute>
             } />
         </Routes>
     );

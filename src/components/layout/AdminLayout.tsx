@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, Shield, LogOut, X } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const navItems = [
     { to: '/admin', icon: LayoutDashboard, label: 'แดชบอร์ด', end: true },
@@ -9,10 +10,12 @@ const navItems = [
 
 const AdminLayout = () => {
     const navigate = useNavigate();
+    const { logout: authLogout } = useAuth();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     const handleLogout = () => {
         setShowLogoutModal(false);
+        authLogout();
         navigate('/login');
     };
 

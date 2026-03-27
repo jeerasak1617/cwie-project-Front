@@ -29,9 +29,9 @@ const AdminDashboardPage = () => {
 
     if (loading) return <div className="flex justify-center items-center h-64 text-gray-500">กำลังโหลด...</div>;
 
-    const studentCount = users.filter(u => u.role === 'student').length;
-    const teacherCount = users.filter(u => u.role === 'advisor').length;
-    const companyCount = users.filter(u => u.role === 'supervisor').length;
+    const studentCount = users.filter(u => u.sys_role === 'student').length;
+    const teacherCount = users.filter(u => u.sys_role === 'advisor').length;
+    const companyCount = users.filter(u => u.sys_role === 'supervisor').length;
     const totalCount = users.length;
     const pendingCount = users.filter(u => u.status === 'pending').length;
 
@@ -109,7 +109,7 @@ const AdminDashboardPage = () => {
                             <tbody className="divide-y divide-slate-50">
                                 {recentRegistrations.map((reg) => {
                                     const sc = getStatusConfig(reg.status);
-                                    const rb = getRoleBadge(reg.role);
+                                    const rb = getRoleBadge(reg.sys_role);
                                     return (
                                         <tr key={reg.id} className="hover:bg-blue-50/30 transition-colors">
                                             <td className="px-6 py-4">

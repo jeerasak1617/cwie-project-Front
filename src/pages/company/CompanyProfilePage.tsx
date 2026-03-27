@@ -1,11 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Camera, Save } from 'lucide-react';
 import CustomDropdown from '../../components/ui/CustomDropdown';
+import api from '../../api';
 
 const CompanyProfilePage = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [profileImage, setProfileImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [loadingProfile, setLoadingProfile] = useState(true);
+    const [saveMessage, setSaveMessage] = useState('');
 
     const [formData, setFormData] = useState({
         companyName: '',
@@ -27,6 +30,30 @@ const CompanyProfilePage = () => {
         'อสังหาริมทรัพย์',
     ];
 
+    // โหลดข้อมูลโปรไฟล์จาก API
+    useEffect(() => {
+        const loadProfile = async () => {
+            try {
+                const res = await api.get('/supervisor/profile');
+                const data = res.data;
+                setFormData({
+                    companyName: data.company_name || '',
+                    businessType: data.business_type || '',
+                    address: data.address || '',
+                    phone: data.phone || '',
+                    email: data.email || '',
+                    website: data.website || '',
+                });
+                if (data.photo_url) setProfileImage(data.photo_url);
+            } catch (err) {
+                console.error('Failed to load profile:', err);
+            } finally {
+                setLoadingProfile(false);
+            }
+        };
+        loadProfile();
+    }, []);
+
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
@@ -40,9 +67,21 @@ const CompanyProfilePage = () => {
 
     const handleSave = async () => {
         setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setIsLoading(false);
-        alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+        setSaveMessage('');
+        try {
+            await api.put('/supervisor/profile', null, {
+                params: {
+                    phone: formData.phone || undefined,
+                    email: formData.email || undefined,
+                }
+            });
+            setSaveMessage('บันทึกข้อมูลเรียบร้อยแล้ว');
+            setTimeout(() => setSaveMessage(''), 3000);
+        } catch (err) {
+            setSaveMessage('เกิดข้อผิดพลาดในการบันทึก');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

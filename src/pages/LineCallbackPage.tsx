@@ -1,30 +1,47 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const LineCallbackPage = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const { loginWithToken } = useAuth();
 
     useEffect(() => {
-        const token = searchParams.get('token');
-        const role = searchParams.get('role');
+        const handleCallback = async () => {
+            // รับ token จาก LINE callback (backend redirect กลับมาพร้อม line_token)
+            const lineToken = searchParams.get('line_token');
+            const role = searchParams.get('role');
+            const error = searchParams.get('error');
 
-        if (token && role) {
-            // LINE Login สำเร็จ → บันทึก token แล้ว redirect ตาม role
-            localStorage.setItem('token', token);
-            
-            switch (role) {
-                case 'admin': navigate('/admin'); break;
-                case 'advisor': navigate('/teacher'); break;
-                case 'supervisor': navigate('/company'); break;
-                case 'student': navigate('/time-attendance'); break;
-                default: navigate('/');
+            if (error) {
+                navigate('/login?error=' + error);
+                return;
             }
-        } else {
-            // ไม่มี token → กลับไปหน้า login
-            navigate('/login?error=line_error');
-        }
-    }, [searchParams, navigate]);
+
+            if (lineToken) {
+                try {
+                    // ใช้ token login ผ่าน AuthContext
+                    const { user } = await loginWithToken(lineToken);
+                    const userRole = user.sys_role || role;
+
+                    switch (userRole) {
+                        case 'admin': navigate('/admin'); break;
+                        case 'advisor': navigate('/teacher'); break;
+                        case 'supervisor': navigate('/company'); break;
+                        case 'student': navigate('/time-attendance'); break;
+                        default: navigate('/');
+                    }
+                } catch {
+                    navigate('/login?error=line_error');
+                }
+            } else {
+                navigate('/login?error=line_error');
+            }
+        };
+
+        handleCallback();
+    }, [searchParams, navigate, loginWithToken]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">

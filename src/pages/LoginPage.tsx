@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,11 +12,51 @@ const LoginPage = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const { loginAdmin } = useAuth();
+    const { loginAdmin, loginWithToken, isAuthenticated, user } = useAuth();
 
-    // เช็ค URL params สำหรับ error จาก LINE
+    // เช็ค URL params
     const params = new URLSearchParams(window.location.search);
     const lineError = params.get('error');
+    const lineToken = params.get('line_token');
+    const lineRole = params.get('role');
+
+    // ถ้า login อยู่แล้ว → redirect ไปหน้าของ role นั้น
+    useEffect(() => {
+        if (isAuthenticated && user?.sys_role) {
+            const roleRedirect: Record<string, string> = {
+                admin: '/admin',
+                advisor: '/teacher',
+                supervisor: '/company',
+                student: '/time-attendance',
+            };
+            navigate(roleRedirect[user.sys_role] || '/');
+        }
+    }, [isAuthenticated, user, navigate]);
+
+    // ถ้ามี line_token จาก URL → login ด้วย token นั้น
+    useEffect(() => {
+        if (lineToken) {
+            const handleLineToken = async () => {
+                setLoading(true);
+                try {
+                    const { user: userData } = await loginWithToken(lineToken);
+                    const role = userData.sys_role || lineRole;
+                    switch (role) {
+                        case 'admin': navigate('/admin'); break;
+                        case 'advisor': navigate('/teacher'); break;
+                        case 'supervisor': navigate('/company'); break;
+                        case 'student': navigate('/time-attendance'); break;
+                        default: navigate('/');
+                    }
+                } catch {
+                    setError('เข้าสู่ระบบด้วย LINE ไม่สำเร็จ');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            handleLineToken();
+        }
+    }, [lineToken, lineRole, loginWithToken, navigate]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -39,7 +79,6 @@ const LoginPage = () => {
     const handleLineLogin = async () => {
         try {
             const res = await api.get('/auth/line/login');
-            // Redirect ไปหน้า LINE Login
             window.location.href = res.data.login_url;
         } catch {
             setError('ไม่สามารถเชื่อมต่อ LINE Login ได้');
