@@ -33,16 +33,37 @@ const SupervisionHistoryPage = () => {
     students.forEach(s => { studentMap[s.internship_id] = s.full_name; });
 
     // Combine schedules and reports into a history list
-    const historyData = schedules.map(s => ({
-        id: s.id,
-        date: s.scheduled_date ? new Date(s.scheduled_date).toLocaleDateString('th-TH') : '-',
-        time: s.scheduled_time || '-',
-        format: 'ออนไลน์', // Default, could be extended
-        student: studentMap[s.internship_id] || `Internship #${s.internship_id}`,
-        internship_id: s.internship_id,
-        canEdit: s.status_id !== 3, // Can edit if not completed
-        visitNumber: s.visit_number,
-    }));
+    // นับครั้งที่นิเทศต่อนักศึกษาอัตโนมัติ (เรียงตามวันที่ สูงสุด 3 ครั้งต่อนักศึกษา)
+    const sortedSchedules = [...schedules].sort((a, b) => {
+        const dateA = a.scheduled_date ? new Date(a.scheduled_date).getTime() : 0;
+        const dateB = b.scheduled_date ? new Date(b.scheduled_date).getTime() : 0;
+        return dateA - dateB;
+    });
+
+    const visitCountPerStudent: Record<number, number> = {};
+    const historyData = sortedSchedules
+        .map(s => {
+            const internId = s.internship_id;
+            if (!visitCountPerStudent[internId]) visitCountPerStudent[internId] = 0;
+            visitCountPerStudent[internId]++;
+            const visitNum = visitCountPerStudent[internId];
+
+            // จำกัด 3 ครั้งต่อนักศึกษา
+            if (visitNum > 3) return null;
+
+            return {
+                id: s.id,
+                date: s.scheduled_date ? new Date(s.scheduled_date).toLocaleDateString('th-TH') : '-',
+                time: s.scheduled_time || '-',
+                format: 'ออนไลน์',
+                student: studentMap[s.internship_id] || `Internship #${s.internship_id}`,
+                internship_id: s.internship_id,
+                canEdit: s.status_id !== 3,
+                visitNumber: visitNum,
+            };
+        })
+        .filter(Boolean)
+        .reverse(); // แสดงล่าสุดก่อน
 
     const getFormatBadge = (format: string) => {
         if (format === 'ออนไลน์') {

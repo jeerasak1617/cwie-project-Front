@@ -40,6 +40,7 @@ import PendingApprovalPage from './pages/PendingApprovalPage';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminUserManagementPage from './pages/admin/AdminUserManagementPage';
+import AdminSemesterPage from './pages/admin/AdminSemesterPage';
 
 function App() {
     return (
@@ -139,6 +140,7 @@ function App() {
                             }>
                                 <Route index element={<AdminDashboardPage />} />
                                 <Route path="users" element={<AdminUserManagementPage />} />
+                                <Route path="semesters" element={<AdminSemesterPage />} />
                             </Route>
                         </Routes>
                     </MainLayout>

@@ -26,12 +26,34 @@ const EvaluationPage = () => {
 
     const [ratings, setRatings] = useState<{ [key: string]: number }>({});
     const [teacherScore, setTeacherScore] = useState<string>('');
+    const [alreadyEvaluated, setAlreadyEvaluated] = useState(false);
+    const [supervisorScore, setSupervisorScore] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchStudent = async () => {
             try {
                 const { data } = await api.get(`/advisor/students/${studentId}`);
                 setStudentData(data);
+
+                // โหลดคะแนนที่ประเมินไปแล้ว
+                try {
+                    const evalRes = await api.get(`/advisor/evaluation/${studentId}`);
+                    const evals = evalRes.data.evaluations || {};
+
+                    // คะแนนอาจารย์ (ถ้าประเมินแล้ว)
+                    if (evals.advisor) {
+                        setAlreadyEvaluated(true);
+                        setTeacherScore(String(evals.advisor.total_score || 0));
+                        if (evals.advisor.scores) {
+                            setRatings(evals.advisor.scores);
+                        }
+                    }
+
+                    // คะแนนบริษัท
+                    if (evals.supervisor) {
+                        setSupervisorScore(evals.supervisor.total_score || 0);
+                    }
+                } catch {}
             } catch (err) {
                 console.error('Failed to fetch:', err);
             } finally {
@@ -42,14 +64,25 @@ const EvaluationPage = () => {
     }, [studentId]);
 
     const handleRatingChange = (sectionPrefix: string, index: number, value: number) => {
-        setRatings(prev => ({ ...prev, [`${sectionPrefix}_${index}`]: value }));
+        setRatings(prev => {
+            const updated = { ...prev, [`${sectionPrefix}_${index}`]: value };
+            // คำนวณคะแนนรวมจาก ratings อัตโนมัติ
+            const ratingTotal = Object.values(updated).reduce((sum, v) => sum + v, 0);
+            setTeacherScore(String(ratingTotal));
+            return updated;
+        });
     };
 
     const calculateTotalScore = () => {
-        const baseScore = 10;
+        const baseScore = 10; // ปฐมนิเทศ 5 + ปัจฉิมนิเทศ 5
         const teacherVal = parseFloat(teacherScore) || 0;
-        return baseScore + teacherVal;
+        const supVal = supervisorScore || 0;
+        return baseScore + teacherVal + supVal;
     };
+
+    // คำนวณคะแนนแยกหมวด
+    const workScore = criteriaSection1.reduce((sum, _, idx) => sum + (ratings[`work_${idx}`] || 0), 0);
+    const personScore = criteriaSection2.reduce((sum, _, idx) => sum + (ratings[`person_${idx}`] || 0), 0);
 
     const handleSave = async () => {
         const score = parseFloat(teacherScore);
@@ -127,6 +160,7 @@ const EvaluationPage = () => {
                         <div className="flex items-center gap-4 mb-2">
                             <div className="w-10 h-10 rounded-full bg-blue-50 text-[#4472c4] flex items-center justify-center font-bold text-xl">1</div>
                             <h2 className="text-2xl font-bold text-gray-900">ด้านการทำงาน</h2>
+                            {workScore > 0 && <span className="ml-auto px-4 py-1 bg-blue-50 text-[#4472c4] rounded-full font-bold text-lg">{workScore}/{criteriaSection1.length * 5}</span>}
                         </div>
                         <p className="text-gray-500 pl-14 text-lg -mt-4 mb-6">คุณภาพงาน การแก้ปัญหา การพัฒนางาน</p>
                         <div className="bg-white rounded-[30px] border border-gray-100 shadow-sm overflow-hidden">
@@ -152,6 +186,7 @@ const EvaluationPage = () => {
                         <div className="flex items-center gap-4 mb-2">
                             <div className="w-10 h-10 rounded-full bg-blue-50 text-[#4472c4] flex items-center justify-center font-bold text-xl">2</div>
                             <h2 className="text-2xl font-bold text-gray-900">บุคลิกภาพ มนุษยสัมพันธ์ และวินัย</h2>
+                            {personScore > 0 && <span className="ml-auto px-4 py-1 bg-blue-50 text-[#4472c4] rounded-full font-bold text-lg">{personScore}/{criteriaSection2.length * 5}</span>}
                         </div>
                         <p className="text-gray-500 pl-14 text-lg -mt-4 mb-6">การแต่งกาย กิริยามารยาท การตรงต่อเวลา</p>
                         <div className="bg-white rounded-[30px] border border-gray-100 shadow-sm overflow-hidden">
@@ -190,14 +225,20 @@ const EvaluationPage = () => {
                                         <td className="py-6 px-8 font-bold text-gray-800 align-top">1. ผู้นิเทศประจำหน่วยงาน<div className="text-sm font-normal text-gray-400 mt-1">(สถานประกอบการ)</div></td>
                                         <td className="py-6 px-8 text-gray-600">พี่เลี้ยงนักศึกษาฝึกประสบการณ์วิชาชีพ</td>
                                         <td className="py-6 px-8 text-center font-bold text-gray-400">50</td>
-                                        <td className="py-6 px-8 text-center"><span className="font-bold text-gray-300 text-xl">-</span></td>
+                                        <td className="py-6 px-8 text-center">
+                                            {supervisorScore !== null ? (
+                                                <span className="inline-block px-4 py-1 bg-green-50 text-green-700 rounded-lg font-bold text-xl">{supervisorScore}</span>
+                                            ) : (
+                                                <span className="font-bold text-gray-300 text-xl">ยังไม่ประเมิน</span>
+                                            )}
+                                        </td>
                                     </tr>
                                     <tr className="bg-[#4472c4]/5">
                                         <td className="py-6 px-8 font-bold text-[#032B68] align-top">2. อาจารย์นิเทศ</td>
                                         <td className="py-6 px-8 text-gray-700 font-medium">การนิเทศนักศึกษาฝึกประสบการณ์วิชาชีพ</td>
                                         <td className="py-6 px-8 text-center font-bold text-[#032B68]">40</td>
                                         <td className="py-6 px-8 text-center">
-                                            <input type="number" value={teacherScore} onChange={(e) => setTeacherScore(e.target.value)} className="w-24 text-center py-2 px-3 border-2 border-[#4472c4]/20 rounded-xl font-bold text-[#032B68] text-xl focus:border-[#4472c4] focus:ring-4 focus:ring-[#4472c4]/10 transition-all outline-none bg-white" placeholder="0" min="0" max="40" />
+                                            <input type="number" value={teacherScore} readOnly className="w-24 text-center py-2 px-3 border-2 border-[#4472c4]/20 rounded-xl font-bold text-[#032B68] text-xl bg-blue-50 cursor-not-allowed outline-none" placeholder="0" />
                                         </td>
                                     </tr>
                                     <tr><td className="py-6 px-8 font-bold text-gray-800">3. หัวหน้าศูนย์ฝึกฯ</td><td className="py-6 px-8 text-gray-600">การเข้าร่วมกิจกรรมปฐมนิเทศ</td><td className="py-6 px-8 text-center font-bold text-gray-600">5</td><td className="py-6 px-8 text-center"><span className="inline-block px-4 py-1 bg-green-50 text-green-700 rounded-lg font-bold">5</span></td></tr>
@@ -227,8 +268,13 @@ const EvaluationPage = () => {
 
                     {/* Footer */}
                     <div className="flex flex-col sm:flex-row items-center justify-end gap-6 pt-8 border-t border-gray-100">
-                        <button onClick={handleSave} disabled={saving} className="w-full sm:w-auto px-12 py-4 bg-[#5DC139] hover:bg-[#4ea82e] text-white text-xl font-bold rounded-[20px] shadow-lg transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3">
-                            <Save size={24} /> {saving ? 'กำลังบันทึก...' : 'บันทึกผลการประเมิน'}
+                        {alreadyEvaluated && (
+                            <div className="flex-1 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 font-bold text-center">
+                                ประเมินนักศึกษาคนนี้แล้ว (คะแนน {teacherScore}/40) — กำลังแสดงคะแนนที่บันทึกไว้
+                            </div>
+                        )}
+                        <button onClick={handleSave} disabled={saving || alreadyEvaluated} className="w-full sm:w-auto px-12 py-4 bg-[#5DC139] hover:bg-[#4ea82e] disabled:bg-gray-400 text-white text-xl font-bold rounded-[20px] shadow-lg transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                            <Save size={24} /> {alreadyEvaluated ? 'ประเมินแล้ว' : saving ? 'กำลังบันทึก...' : 'บันทึกผลการประเมิน'}
                         </button>
                     </div>
                 </div>

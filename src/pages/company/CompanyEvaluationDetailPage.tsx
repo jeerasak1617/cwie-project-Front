@@ -15,29 +15,48 @@ const CompanyEvaluationDetailPage = () => {
 
     const [ratings, setRatings] = useState<{ [key: string]: number }>({});
     const [mentorScore, setMentorScore] = useState<string>('');
+    const [alreadyEvaluated, setAlreadyEvaluated] = useState(false);
 
     useEffect(() => {
-        const fetch = async () => {
+        const fetchData = async () => {
             try {
-                // Supervisor doesn't have /students/{id} detail endpoint like advisor
-                // Use students list and find
                 const { data } = await api.get('/supervisor/students');
                 const found = (data.students || []).find((s: any) => s.internship_id === Number(studentId));
                 setStudentInfo(found);
+
+                // โหลดคะแนนเดิม (ถ้าประเมินแล้ว)
+                try {
+                    const evalRes = await api.get(`/supervisor/evaluation/${studentId}`);
+                    if (evalRes.data.evaluation) {
+                        const ev = evalRes.data.evaluation;
+                        setAlreadyEvaluated(true);
+                        setMentorScore(String(ev.total_score || 0));
+                        if (ev.scores) setRatings(ev.scores);
+                    }
+                } catch {}
             } catch (err) { console.error(err); }
             finally { setLoading(false); }
         };
-        fetch();
+        fetchData();
     }, [studentId]);
 
     const handleRatingChange = (prefix: string, idx: number, val: number) => {
-        setRatings(prev => ({ ...prev, [`${prefix}_${idx}`]: val }));
+        if (alreadyEvaluated) return; // ถ้าประเมินแล้วไม่ให้แก้
+        setRatings(prev => {
+            const updated = { ...prev, [`${prefix}_${idx}`]: val };
+            const ratingTotal = Object.values(updated).reduce((sum, v) => sum + v, 0);
+            setMentorScore(String(ratingTotal));
+            return updated;
+        });
     };
 
     const calculateTotalScore = () => {
         const base = 10;
         return base + (parseFloat(mentorScore) || 0);
     };
+
+    const workScore = criteriaSection1.reduce((sum, _, idx) => sum + (ratings[`work_${idx}`] || 0), 0);
+    const personScore = criteriaSection2.reduce((sum, _, idx) => sum + (ratings[`person_${idx}`] || 0), 0);
 
     const handleSave = async () => {
         const score = parseFloat(mentorScore);
@@ -53,7 +72,7 @@ const CompanyEvaluationDetailPage = () => {
                 }
             });
             alert('บันทึกผลการประเมินสำเร็จ');
-            navigate('/company/evaluations');
+            navigate('/company/evaluation');
         } catch (err: any) {
             alert(err.response?.data?.detail || 'ไม่สามารถบันทึกได้');
         } finally { setSaving(false); }
@@ -80,15 +99,15 @@ const CompanyEvaluationDetailPage = () => {
                 <div className="bg-[#F8F9FA] rounded-[30px] p-8 mb-12">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div><div className="text-gray-500 text-sm mb-1">ชื่อ-นามสกุล</div><div className="text-xl font-bold text-[#032B68]">{student.full_name || '-'}</div><div className="text-[#4472c4] text-sm mt-1">{student.student_code || '-'}</div></div>
-                        <div><div className="text-gray-500 text-sm mb-1">ชั่วโมงสะสม</div><div className="text-gray-900 font-semibold">{student.completed_hours || 0} / {student.required_hours || 0} ชม.</div></div>
-                        <div><div className="text-gray-500 text-sm mb-1">ระยะเวลาฝึก</div><div className="text-gray-900 font-semibold">{student.start_date ? `${new Date(student.start_date).toLocaleDateString('th-TH')} - ${student.end_date ? new Date(student.end_date).toLocaleDateString('th-TH') : '-'}` : '-'}</div></div>
+                        <div><div className="text-gray-500 text-sm mb-1">ชั่วโมงสะสม</div><div className="text-gray-900 font-semibold">{student.completed_hours || 0} / {student.required_hours || 450} ชม.</div></div>
+                        <div><div className="text-gray-500 text-sm mb-1">ภาคเรียน</div><div className="text-gray-900 font-semibold">{student.semester || `${student.start_date ? new Date(student.start_date).toLocaleDateString('th-TH') : '-'} - ${student.end_date ? new Date(student.end_date).toLocaleDateString('th-TH') : '-'}`}</div></div>
                     </div>
                 </div>
 
                 <div className="space-y-24">
                     {/* Section 1 */}
                     <div className="space-y-6">
-                        <div className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-blue-50 text-[#4472c4] flex items-center justify-center font-bold text-xl">1</div><h2 className="text-2xl font-bold text-gray-900">ด้านการทำงาน</h2></div>
+                        <div className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-blue-50 text-[#4472c4] flex items-center justify-center font-bold text-xl">1</div><h2 className="text-2xl font-bold text-gray-900">ด้านการทำงาน</h2>{workScore > 0 && <span className="ml-auto px-4 py-1 bg-blue-50 text-[#4472c4] rounded-full font-bold text-lg">{workScore}/{criteriaSection1.length * 5}</span>}</div>
                         <div className="bg-white rounded-[30px] border border-gray-100 shadow-sm overflow-hidden">
                             {criteriaSection1.map((item, idx) => (
                                 <div key={idx} className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-50 last:border-0">
@@ -105,7 +124,7 @@ const CompanyEvaluationDetailPage = () => {
 
                     {/* Section 2 */}
                     <div className="space-y-6">
-                        <div className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-blue-50 text-[#4472c4] flex items-center justify-center font-bold text-xl">2</div><h2 className="text-2xl font-bold text-gray-900">บุคลิกภาพ มนุษยสัมพันธ์ และวินัย</h2></div>
+                        <div className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-blue-50 text-[#4472c4] flex items-center justify-center font-bold text-xl">2</div><h2 className="text-2xl font-bold text-gray-900">บุคลิกภาพ มนุษยสัมพันธ์ และวินัย</h2>{personScore > 0 && <span className="ml-auto px-4 py-1 bg-blue-50 text-[#4472c4] rounded-full font-bold text-lg">{personScore}/{criteriaSection2.length * 5}</span>}</div>
                         <div className="bg-white rounded-[30px] border border-gray-100 shadow-sm overflow-hidden">
                             {criteriaSection2.map((item, idx) => (
                                 <div key={idx} className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-50 last:border-0">
@@ -131,7 +150,7 @@ const CompanyEvaluationDetailPage = () => {
                                         <td className="py-5 px-8 font-bold text-[#032B68]">1. ผู้นิเทศหน่วยงาน</td>
                                         <td className="py-5 px-8 text-gray-700">พี่เลี้ยง</td>
                                         <td className="py-5 px-8 text-center font-bold text-[#032B68]">50</td>
-                                        <td className="py-5 px-8 text-center"><input type="number" value={mentorScore} onChange={e => setMentorScore(e.target.value)} className="w-24 text-center py-2 border-2 border-[#4472c4]/20 rounded-xl font-bold text-[#032B68] text-xl focus:border-[#4472c4] outline-none bg-white" placeholder="0" min="0" max="50" /></td>
+                                        <td className="py-5 px-8 text-center"><input type="number" value={mentorScore} readOnly className="w-24 text-center py-2 border-2 border-[#4472c4]/20 rounded-xl font-bold text-[#032B68] text-xl bg-blue-50 cursor-not-allowed outline-none" placeholder="0" /></td>
                                     </tr>
                                     <tr><td className="py-5 px-8 font-bold text-gray-800">2. อาจารย์นิเทศ</td><td className="py-5 px-8 text-gray-600">การนิเทศนักศึกษา</td><td className="py-5 px-8 text-center font-bold">40</td><td className="py-5 px-8 text-center text-gray-300">-</td></tr>
                                     <tr><td className="py-5 px-8 font-bold">3. หัวหน้าศูนย์ฯ</td><td className="py-5 px-8 text-gray-600">ปฐมนิเทศ</td><td className="py-5 px-8 text-center">5</td><td className="py-5 px-8 text-center"><span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg font-bold">5</span></td></tr>
@@ -152,9 +171,14 @@ const CompanyEvaluationDetailPage = () => {
                         </div>
                     </div>
 
-                    <div className="flex justify-end pt-8 border-t border-gray-100">
-                        <button onClick={handleSave} disabled={saving} className="px-12 py-4 bg-[#5DC139] hover:bg-[#4ea82e] text-white text-xl font-bold rounded-[20px] shadow-lg flex items-center gap-3">
-                            <Save size={24} /> {saving ? 'กำลังบันทึก...' : 'บันทึกผลการประเมิน'}
+                    <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-8 border-t border-gray-100">
+                        {alreadyEvaluated && (
+                            <div className="flex-1 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 font-bold text-center">
+                                ประเมินนักศึกษาคนนี้แล้ว (คะแนน {mentorScore}/50) — กำลังแสดงคะแนนที่บันทึกไว้
+                            </div>
+                        )}
+                        <button onClick={handleSave} disabled={saving || alreadyEvaluated} className="px-12 py-4 bg-[#5DC139] hover:bg-[#4ea82e] disabled:bg-gray-400 text-white text-xl font-bold rounded-[20px] shadow-lg flex items-center gap-3">
+                            <Save size={24} /> {alreadyEvaluated ? 'ประเมินแล้ว' : saving ? 'กำลังบันทึก...' : 'บันทึกผลการประเมิน'}
                         </button>
                     </div>
                 </div>

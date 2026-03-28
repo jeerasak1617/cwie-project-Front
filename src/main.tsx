@@ -8,16 +8,16 @@ import "react-datepicker/dist/react-datepicker.css";
 import './index.css'
 import App from './App.tsx'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <LineAuthProvider>
-          <RegisteredUsersProvider>
-            <App />
-          </RegisteredUsersProvider>
-        </LineAuthProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  </StrictMode>,
-)
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <BrowserRouter>
+        <AuthProvider>
+          <LineAuthProvider>
+            <RegisteredUsersProvider>
+              <App />
+            </RegisteredUsersProvider>
+          </LineAuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </StrictMode>,
+  )

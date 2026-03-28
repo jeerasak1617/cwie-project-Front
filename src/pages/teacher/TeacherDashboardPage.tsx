@@ -41,14 +41,22 @@ const TeacherDashboardPage = () => {
         { label: "ประเมินครบแล้ว", value: evaluatedCount, icon: CheckCircle2, color: "bg-[#4472c4] text-white" },
     ];
 
-    // Build activities from visit schedules
+    // Build activities from visit schedules — นับครั้งอัตโนมัติต่อนักศึกษา (สูงสุด 3 ครั้ง)
     const activities = students.map((s) => {
-        const studentSchedules = visitSchedules.filter(v => v.internship_id === s.internship_id);
+        const studentSchedules = visitSchedules
+            .filter(v => v.internship_id === s.internship_id)
+            .sort((a: any, b: any) => {
+                const dateA = a.scheduled_date ? new Date(a.scheduled_date).getTime() : 0;
+                const dateB = b.scheduled_date ? new Date(b.scheduled_date).getTime() : 0;
+                return dateA - dateB;
+            })
+            .slice(0, 3); // จำกัด 3 ครั้งต่อนักศึกษา
+
         return {
             studentId: s.student_code,
             name: s.full_name,
-            events: studentSchedules.map((v: any) => ({
-                title: `นิเทศ ครั้งที่ ${v.visit_number}`,
+            events: studentSchedules.map((v: any, idx: number) => ({
+                title: `นิเทศ ครั้งที่ ${idx + 1}`,
                 date: v.scheduled_date ? new Date(v.scheduled_date).toLocaleDateString('th-TH') : '-',
             })),
         };

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Shield, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Users, Shield, LogOut, X, Calendar } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const navItems = [
     { to: '/admin', icon: LayoutDashboard, label: 'แดชบอร์ด', end: true },
     { to: '/admin/users', icon: Users, label: 'จัดการผู้ใช้งาน', end: false },
+    { to: '/admin/semesters', icon: Calendar, label: 'จัดการภาคเรียน', end: false },
 ];
 
 const AdminLayout = () => {

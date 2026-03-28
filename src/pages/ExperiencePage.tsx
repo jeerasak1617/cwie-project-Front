@@ -38,7 +38,7 @@ const ExperiencePage = () => {
     const [newStartDate, setNewStartDate] = useState('');
     const [newEndDate, setNewEndDate] = useState('');
     const [newJobTitle, setNewJobTitle] = useState('');
-    const [newRequiredHours, setNewRequiredHours] = useState('560');
+    const [newRequiredHours, setNewRequiredHours] = useState('450');
 
     const prefixes = ['นาย', 'นางสาว', 'นาง'];
     const sections = ['ภาคในเวลาราชการ', 'ภาคนอกเวลาราชการ'];
@@ -160,7 +160,7 @@ const ExperiencePage = () => {
                 params: {
                     company_id: Number(newCompanyId), semester_id: Number(newSemesterId),
                     start_date: newStartDate, end_date: newEndDate,
-                    job_title: newJobTitle || undefined, required_hours: Number(newRequiredHours) || 560,
+                    job_title: newJobTitle || undefined, required_hours: Number(newRequiredHours) || 450,
                 }
             });
             setMessage('สร้างข้อมูลการฝึกงานสำเร็จ!');
@@ -274,7 +274,7 @@ const ExperiencePage = () => {
                                         </div>
                                         <div>
                                             <label className="block text-base font-bold text-gray-900 mb-2">ชั่วโมงที่ต้องฝึก</label>
-                                            <input type="number" value={newRequiredHours} onChange={e => setNewRequiredHours(e.target.value)} placeholder="560" className={inputClass} />
+                                            <input type="number" value={newRequiredHours} onChange={e => setNewRequiredHours(e.target.value)} placeholder="450" className={inputClass} />
                                         </div>
                                     </div>
                                     <div className="flex justify-end pt-4">

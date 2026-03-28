@@ -54,15 +54,38 @@ const CompanyProfilePage = () => {
         loadProfile();
     }, []);
 
-    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
+    const compressImage = (file: File, maxWidth = 400, quality = 0.7): Promise<string> => {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setProfileImage(reader.result as string);
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d')?.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = reject;
+                img.src = e.target?.result as string;
             };
+            reader.onerror = reject;
             reader.readAsDataURL(file);
-        }
+        });
+    };
+
+    const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) { setSaveMessage('กรุณาเลือกไฟล์รูปภาพเท่านั้น'); return; }
+        if (file.size > 5 * 1024 * 1024) { setSaveMessage('ไฟล์ใหญ่เกิน 5MB'); return; }
+        try {
+            const compressed = await compressImage(file, 400, 0.7);
+            setProfileImage(compressed);
+            setSaveMessage('อัปโหลดโลโก้สำเร็จ');
+            setTimeout(() => setSaveMessage(''), 3000);
+        } catch { setSaveMessage('อัปโหลดไม่สำเร็จ'); }
     };
 
     const handleSave = async () => {
@@ -124,7 +147,7 @@ const CompanyProfilePage = () => {
                                 ref={fileInputRef}
                                 onChange={handleImageUpload}
                                 className="hidden"
-                                accept="image/*"
+                                accept="image/jpeg,image/png,image/webp"
                             />
                             <span className="px-3 py-1 bg-[#dbeafe] text-[#1e40af] text-xs rounded-full font-medium">
                                 • สถานประกอบการ

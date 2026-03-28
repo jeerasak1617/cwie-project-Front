@@ -9,9 +9,11 @@ import api from '../../api';
 
 const ScheduleSupervisionPage = () => {
     const [students, setStudents] = useState<any[]>([]);
+    const [visitSchedules, setVisitSchedules] = useState<any[]>([]);
     const [selectedStudent, setSelectedStudent] = useState('');
     const [selectedInternshipId, setSelectedInternshipId] = useState<number | null>(null);
     const [workplace, setWorkplace] = useState('');
+    const [visitCount, setVisitCount] = useState(0);
     const [supervisionDate, setSupervisionDate] = useState<Date | null>(null);
     const [supervisionTime, setSupervisionTime] = useState<Date | null>(null);
     const [note, setNote] = useState('');
@@ -19,15 +21,19 @@ const ScheduleSupervisionPage = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchStudents = async () => {
+        const fetchData = async () => {
             try {
-                const { data } = await api.get('/advisor/students');
-                setStudents(data.students || []);
+                const [studRes, schedRes] = await Promise.all([
+                    api.get('/advisor/students'),
+                    api.get('/advisor/visit-schedules'),
+                ]);
+                setStudents(studRes.data.students || []);
+                setVisitSchedules(schedRes.data.schedules || []);
             } catch (err) {
-                console.error('Failed to fetch students:', err);
+                console.error('Failed to fetch:', err);
             }
         };
-        fetchStudents();
+        fetchData();
     }, []);
 
     const handleStudentChange = (studentName: string) => {
@@ -36,15 +42,24 @@ const ScheduleSupervisionPage = () => {
         if (student) {
             setSelectedInternshipId(student.internship_id);
             setWorkplace(`บริษัท ID: ${student.company_id || '-'}`);
+            // นับจำนวนครั้งที่นิเทศไปแล้ว
+            const count = visitSchedules.filter(v => v.internship_id === student.internship_id).length;
+            setVisitCount(count);
         } else {
             setSelectedInternshipId(null);
             setWorkplace('');
+            setVisitCount(0);
         }
     };
 
     const handleSave = async () => {
         if (!selectedInternshipId || !supervisionDate) {
             alert('กรุณาเลือกนักศึกษาและวันที่นิเทศ');
+            return;
+        }
+        // ตรวจว่านิเทศครบ 3 ครั้งหรือยัง
+        if (visitCount >= 3) {
+            alert('นักศึกษาคนนี้ถูกนิเทศครบ 3 ครั้งแล้ว ไม่สามารถลงเพิ่มได้');
             return;
         }
         setSaving(true);
@@ -56,13 +71,14 @@ const ScheduleSupervisionPage = () => {
             await api.post('/advisor/visit-schedule', null, {
                 params: {
                     internship_id: selectedInternshipId,
-                    semester_id: 1, // TODO: get current semester
+                    semester_id: 1,
                     scheduled_date: supervisionDate.toISOString().split('T')[0],
                     scheduled_time: timeStr,
+                    visit_number: visitCount + 1,
                     notes: note || undefined,
                 }
             });
-            alert('บันทึกวันนิเทศเรียบร้อยแล้ว');
+            alert(`บันทึกวันนิเทศครั้งที่ ${visitCount + 1} เรียบร้อยแล้ว`);
             navigate('/teacher');
         } catch (err: any) {
             console.error('Failed to save:', err);
@@ -90,6 +106,14 @@ const ScheduleSupervisionPage = () => {
                             placeholder="เลือกนักศึกษา"
                             variant="underline"
                         />
+                        {selectedInternshipId && (
+                            <div className={`mt-2 p-3 rounded-xl text-sm font-medium ${visitCount >= 3 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
+                                {visitCount >= 3
+                                    ? `นิเทศครบ 3 ครั้งแล้ว ไม่สามารถลงเพิ่มได้`
+                                    : `นิเทศไปแล้ว ${visitCount} ครั้ง | เหลืออีก ${3 - visitCount} ครั้ง (ครั้งถัดไป: ครั้งที่ ${visitCount + 1})`
+                                }
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
