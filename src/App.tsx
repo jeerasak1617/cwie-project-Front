@@ -41,6 +41,8 @@ import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminUserManagementPage from './pages/admin/AdminUserManagementPage';
 import AdminSemesterPage from './pages/admin/AdminSemesterPage';
+import AdminCompanyPage from './pages/admin/AdminCompanyPage';
+import AdminEvaluationPage from './pages/admin/AdminEvaluationPage';
 
 function App() {
     return (
@@ -141,6 +143,8 @@ function App() {
                                 <Route index element={<AdminDashboardPage />} />
                                 <Route path="users" element={<AdminUserManagementPage />} />
                                 <Route path="semesters" element={<AdminSemesterPage />} />
+                                <Route path="companies" element={<AdminCompanyPage />} />
+                                <Route path="evaluation" element={<AdminEvaluationPage />} />
                             </Route>
                         </Routes>
                     </MainLayout>

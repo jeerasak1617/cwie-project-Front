@@ -28,6 +28,8 @@ const EvaluationPage = () => {
     const [teacherScore, setTeacherScore] = useState<string>('');
     const [alreadyEvaluated, setAlreadyEvaluated] = useState(false);
     const [supervisorScore, setSupervisorScore] = useState<number | null>(null);
+    const [orientationScore, setOrientationScore] = useState<number | null>(null);
+    const [debriefingScore, setDebriefingScore] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchStudent = async () => {
@@ -35,24 +37,18 @@ const EvaluationPage = () => {
                 const { data } = await api.get(`/advisor/students/${studentId}`);
                 setStudentData(data);
 
-                // โหลดคะแนนที่ประเมินไปแล้ว
                 try {
                     const evalRes = await api.get(`/advisor/evaluation/${studentId}`);
                     const evals = evalRes.data.evaluations || {};
 
-                    // คะแนนอาจารย์ (ถ้าประเมินแล้ว)
                     if (evals.advisor) {
                         setAlreadyEvaluated(true);
                         setTeacherScore(String(evals.advisor.total_score || 0));
-                        if (evals.advisor.scores) {
-                            setRatings(evals.advisor.scores);
-                        }
+                        if (evals.advisor.scores) setRatings(evals.advisor.scores);
                     }
-
-                    // คะแนนบริษัท
-                    if (evals.supervisor) {
-                        setSupervisorScore(evals.supervisor.total_score || 0);
-                    }
+                    if (evals.supervisor) setSupervisorScore(evals.supervisor.total_score || 0);
+                    if (evals.orientation) setOrientationScore(evals.orientation.total_score || 0);
+                    if (evals.debriefing) setDebriefingScore(evals.debriefing.total_score || 0);
                 } catch {}
             } catch (err) {
                 console.error('Failed to fetch:', err);
@@ -74,10 +70,11 @@ const EvaluationPage = () => {
     };
 
     const calculateTotalScore = () => {
-        const baseScore = 10; // ปฐมนิเทศ 5 + ปัจฉิมนิเทศ 5
         const teacherVal = parseFloat(teacherScore) || 0;
         const supVal = supervisorScore || 0;
-        return baseScore + teacherVal + supVal;
+        const oriVal = orientationScore ?? 0;
+        const debVal = debriefingScore ?? 0;
+        return teacherVal + supVal + oriVal + debVal;
     };
 
     // คำนวณคะแนนแยกหมวด
@@ -241,8 +238,8 @@ const EvaluationPage = () => {
                                             <input type="number" value={teacherScore} readOnly className="w-24 text-center py-2 px-3 border-2 border-[#4472c4]/20 rounded-xl font-bold text-[#032B68] text-xl bg-blue-50 cursor-not-allowed outline-none" placeholder="0" />
                                         </td>
                                     </tr>
-                                    <tr><td className="py-6 px-8 font-bold text-gray-800">3. หัวหน้าศูนย์ฝึกฯ</td><td className="py-6 px-8 text-gray-600">การเข้าร่วมกิจกรรมปฐมนิเทศ</td><td className="py-6 px-8 text-center font-bold text-gray-600">5</td><td className="py-6 px-8 text-center"><span className="inline-block px-4 py-1 bg-green-50 text-green-700 rounded-lg font-bold">5</span></td></tr>
-                                    <tr><td className="py-6 px-8 font-bold text-gray-800">4. กรรมการศูนย์ฝึกฯ</td><td className="py-6 px-8 text-gray-600">การเข้าร่วมกิจกรรมปัจฉิมนิเทศ</td><td className="py-6 px-8 text-center font-bold text-gray-600">5</td><td className="py-6 px-8 text-center"><span className="inline-block px-4 py-1 bg-green-50 text-green-700 rounded-lg font-bold">5</span></td></tr>
+                                    <tr><td className="py-6 px-8 font-bold text-gray-800">3. หัวหน้าศูนย์ฝึกฯ</td><td className="py-6 px-8 text-gray-600">การเข้าร่วมกิจกรรมปฐมนิเทศ</td><td className="py-6 px-8 text-center font-bold text-gray-600">5</td><td className="py-6 px-8 text-center">{orientationScore !== null ? <span className="inline-block px-4 py-1 bg-green-50 text-green-700 rounded-lg font-bold">{orientationScore}</span> : <span className="text-gray-300">รอ Admin</span>}</td></tr>
+                                    <tr><td className="py-6 px-8 font-bold text-gray-800">4. กรรมการศูนย์ฝึกฯ</td><td className="py-6 px-8 text-gray-600">การเข้าร่วมกิจกรรมปัจฉิมนิเทศ</td><td className="py-6 px-8 text-center font-bold text-gray-600">5</td><td className="py-6 px-8 text-center">{debriefingScore !== null ? <span className="inline-block px-4 py-1 bg-green-50 text-green-700 rounded-lg font-bold">{debriefingScore}</span> : <span className="text-gray-300">รอ Admin</span>}</td></tr>
                                 </tbody>
                                 <tfoot className="bg-gray-50/80 border-t border-gray-100">
                                     <tr><td colSpan={2} className="py-6 px-8 font-bold text-gray-900 text-lg">รวมคะแนนทั้งหมด</td><td className="py-6 px-8 text-center font-bold text-gray-900 text-lg">100</td><td className="py-6 px-8 text-center"><span className="font-bold text-[#2E5A9B] text-2xl">{calculateTotalScore()}</span></td></tr>

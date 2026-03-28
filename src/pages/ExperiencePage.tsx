@@ -342,11 +342,11 @@ const ExperiencePage = () => {
                                             ชื่อผู้นิเทศประจำหน่วยงาน
                                             {internship?.supervisor && <span className="text-xs text-green-500 ml-2">(ดึงจากระบบ)</span>}
                                         </label>
-                                        <input type="text" value={supervisorName} onChange={internship?.supervisor ? undefined : e => setSupervisorName(e.target.value)} readOnly={!!internship?.supervisor} placeholder="รอกำหนดโดยอาจารย์" className={internship?.supervisor ? "w-full px-5 py-3 rounded-full border border-green-200 text-gray-700 bg-green-50 font-medium text-base cursor-not-allowed" : inputClass} />
+                                        <input type="text" value={supervisorName} onChange={internship?.supervisor ? undefined : e => setSupervisorName(e.target.value)} readOnly={!!internship?.supervisor} placeholder="รอกำหนดโดยผู้นิเทศประจำหน่วยงาน" className={internship?.supervisor ? "w-full px-5 py-3 rounded-full border border-green-200 text-gray-700 bg-green-50 font-medium text-base cursor-not-allowed" : inputClass} />
                                     </div>
                                     <div>
                                         <label className="block text-base font-bold text-gray-900 mb-2">ตำแหน่ง</label>
-                                        <input type="text" value={supervisorPosition} onChange={internship?.supervisor ? undefined : e => setSupervisorPosition(e.target.value)} readOnly={!!internship?.supervisor} placeholder="รอกำหนดโดยอาจารย์" className={internship?.supervisor ? "w-full px-5 py-3 rounded-full border border-green-200 text-gray-700 bg-green-50 font-medium text-base cursor-not-allowed" : inputClass} />
+                                        <input type="text" value={supervisorPosition} onChange={internship?.supervisor ? undefined : e => setSupervisorPosition(e.target.value)} readOnly={!!internship?.supervisor} placeholder="รอกำหนดโดยผู้นิเทศประจำหน่วยงาน" className={internship?.supervisor ? "w-full px-5 py-3 rounded-full border border-green-200 text-gray-700 bg-green-50 font-medium text-base cursor-not-allowed" : inputClass} />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
