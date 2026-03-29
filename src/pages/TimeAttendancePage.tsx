@@ -87,9 +87,10 @@ const TimeAttendancePage = () => {
                     <div className="bg-[#fcfcfc] rounded-3xl p-6 flex justify-center items-center shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-gray-100 min-h-[100px]"><span className="font-bold text-gray-700">ลา {stats.leaveDays} วัน</span></div>
                     <div className="bg-[#fcfcfc] rounded-3xl p-6 flex justify-center items-center shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-gray-100 min-h-[100px]"><span className="font-bold text-gray-700">ขาด {stats.absentDays} วัน</span></div>
                 </div>
-                <div className="text-left mt-8"><Link to="/history" className="inline-flex items-center text-[#4472c4] font-bold text-lg hover:underline decoration-2 underline-offset-4">ดูประวัติ</Link></div>
-                <LeaveRequestModal isOpen={isLeaveModalOpen} onClose={() => setIsLeaveModalOpen(false)} />
-                <OffsiteWorkModal isOpen={isOffsiteModalOpen} onClose={() => setIsOffsiteModalOpen(false)} />
+                <div className="text-left mt-8"><Link to="/history" className="inline-flex items-center text-[#4472c4] font-bold text-lg hover:underline decoration-2 underline-offset-4">ดูประวัติการลงเวลา / การลา / นอกสถานที่</Link></div>
+
+                <LeaveRequestModal isOpen={isLeaveModalOpen} onClose={() => setIsLeaveModalOpen(false)} onSuccess={loadStats} />
+                <OffsiteWorkModal isOpen={isOffsiteModalOpen} onClose={() => setIsOffsiteModalOpen(false)} onSuccess={loadStats} />
             </div>
         </div>
     );

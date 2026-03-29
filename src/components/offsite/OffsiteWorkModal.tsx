@@ -6,9 +6,10 @@ import api from '../../api';
 interface OffsiteWorkModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSuccess?: () => void;
 }
 
-const OffsiteWorkModal = ({ isOpen, onClose }: OffsiteWorkModalProps) => {
+const OffsiteWorkModal = ({ isOpen, onClose, onSuccess }: OffsiteWorkModalProps) => {
     const [date, setDate] = useState<Date | null>(null);
     const [timeOut, setTimeOut] = useState<Date | null>(null);
     const [timeReturn, setTimeReturn] = useState<Date | null>(null);
@@ -32,7 +33,7 @@ const OffsiteWorkModal = ({ isOpen, onClose }: OffsiteWorkModalProps) => {
             if (timeReturn) params.return_time = timeReturn.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
             await api.post('/student/off-site-request', null, { params });
             setMessage('ส่งคำขอสำเร็จ!');
-            setTimeout(() => { onClose(); setMessage(''); setDestination(''); setPurpose(''); setDate(null); setTimeOut(null); setTimeReturn(null); }, 1500);
+            setTimeout(() => { onClose(); onSuccess?.(); setMessage(''); setDestination(''); setPurpose(''); setDate(null); setTimeOut(null); setTimeReturn(null); }, 1500);
         } catch (err: any) { setMessage(err.response?.data?.detail || 'เกิดข้อผิดพลาด'); }
         finally { setLoading(false); }
     };

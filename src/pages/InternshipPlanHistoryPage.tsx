@@ -68,8 +68,7 @@ const InternshipPlanHistoryPage = () => {
                                 </div>
                                 <div className="flex gap-6 text-sm text-gray-500 mb-2">
                                     <span>{formatDate(p.start_date)} - {formatDate(p.end_date)}</span>
-                                    {p.planned_hours && <span>{p.planned_hours} ชม.</span>}
-                                    <span>เสร็จ {p.completion_percentage}%</span>
+                                    {p.planned_hours && <span>ฝึกรวมไป {p.planned_hours} ชั่วโมง</span>}
                                 </div>
                                 {p.task_description && <p className="text-gray-600 text-sm mt-2">{p.task_description}</p>}
                                 {p.supervisor_comment && (

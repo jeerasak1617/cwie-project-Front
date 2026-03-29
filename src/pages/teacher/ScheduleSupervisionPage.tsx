@@ -36,13 +36,18 @@ const ScheduleSupervisionPage = () => {
         fetchData();
     }, []);
 
-    const handleStudentChange = (studentName: string) => {
+    const handleStudentChange = async (studentName: string) => {
         setSelectedStudent(studentName);
         const student = students.find(s => s.full_name === studentName);
         if (student) {
             setSelectedInternshipId(student.internship_id);
-            setWorkplace(`บริษัท ID: ${student.company_id || '-'}`);
-            // นับจำนวนครั้งที่นิเทศไปแล้ว
+            // ดึงชื่อบริษัทจริง
+            if (student.company_id) {
+                try {
+                    const res = await api.get(`/master/companies/${student.company_id}`);
+                    setWorkplace(res.data.name_th || res.data.name_en || '-');
+                } catch { setWorkplace('-'); }
+            } else { setWorkplace('-'); }
             const count = visitSchedules.filter(v => v.internship_id === student.internship_id).length;
             setVisitCount(count);
         } else {

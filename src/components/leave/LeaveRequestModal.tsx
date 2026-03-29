@@ -6,9 +6,10 @@ import api from '../../api';
 interface LeaveRequestModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSuccess?: () => void;
 }
 
-const LeaveRequestModal = ({ isOpen, onClose }: LeaveRequestModalProps) => {
+const LeaveRequestModal = ({ isOpen, onClose, onSuccess }: LeaveRequestModalProps) => {
     const [leaveType, setLeaveType] = useState<'personal' | 'sick'>('personal');
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
@@ -34,7 +35,7 @@ const LeaveRequestModal = ({ isOpen, onClose }: LeaveRequestModalProps) => {
                 }
             });
             setMessage('ส่งคำขอลาสำเร็จ!');
-            setTimeout(() => { onClose(); setMessage(''); setReason(''); setStartDate(null); setEndDate(null); }, 1500);
+            setTimeout(() => { onClose(); onSuccess?.(); setMessage(''); setReason(''); setStartDate(null); setEndDate(null); }, 1500);
         } catch (err: any) { setMessage(err.response?.data?.detail || 'เกิดข้อผิดพลาด'); }
         finally { setLoading(false); }
     };

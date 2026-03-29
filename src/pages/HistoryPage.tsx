@@ -15,11 +15,13 @@ interface AttendanceRecord {
 
 const HistoryPage = () => {
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
+    const [leaves, setLeaves] = useState<any[]>([]);
+    const [offsites, setOffsites] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-    useEffect(() => { loadRecords(); }, [selectedMonth, selectedYear]);
+    useEffect(() => { loadRecords(); loadLeaveAndOffsite(); }, [selectedMonth, selectedYear]);
 
     const loadRecords = async () => {
         setLoading(true);
@@ -27,6 +29,17 @@ const HistoryPage = () => {
             const res = await api.get('/student/attendance', { params: { month: selectedMonth, year: selectedYear } });
             setRecords(res.data.records || []);
         } catch {} finally { setLoading(false); }
+    };
+
+    const loadLeaveAndOffsite = async () => {
+        try {
+            const [leaveRes, offsiteRes] = await Promise.all([
+                api.get('/student/leave-requests').catch(() => ({ data: { requests: [] } })),
+                api.get('/student/off-site-requests').catch(() => ({ data: { requests: [] } })),
+            ]);
+            setLeaves(leaveRes.data.requests || []);
+            setOffsites(offsiteRes.data.requests || []);
+        } catch {}
     };
 
     const getDayName = (dateStr: string) => {
@@ -97,6 +110,43 @@ const HistoryPage = () => {
                                 })}
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {/* ประวัติการลา */}
+                {leaves.length > 0 && (
+                    <div className="mt-10">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">ประวัติการลา ({leaves.length} รายการ)</h2>
+                        <div className="space-y-3">
+                            {leaves.map((l: any, i: number) => (
+                                <div key={i} className="bg-gray-50 rounded-2xl p-4 flex justify-between items-center border border-gray-100">
+                                    <div>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold mr-2 ${l.leave_type_id === 1 ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>{l.leave_type_id === 1 ? 'ลากิจ' : 'ลาป่วย'}</span>
+                                        <span className="text-gray-700 font-medium">{l.start_date ? new Date(l.start_date).toLocaleDateString('th-TH') : '-'} — {l.end_date ? new Date(l.end_date).toLocaleDateString('th-TH') : '-'}</span>
+                                        {l.reason && <p className="text-sm text-gray-500 mt-1">เหตุผล: {l.reason}</p>}
+                                    </div>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${l.status === 'approved' ? 'bg-green-100 text-green-700' : l.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{l.status === 'approved' ? 'อนุมัติ' : l.status === 'rejected' ? 'ไม่อนุมัติ' : 'รอตรวจ'}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ประวัติปฏิบัติงานนอกสถานที่ */}
+                {offsites.length > 0 && (
+                    <div className="mt-10">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">ประวัติปฏิบัติงานนอกสถานที่ ({offsites.length} รายการ)</h2>
+                        <div className="space-y-3">
+                            {offsites.map((o: any, i: number) => (
+                                <div key={i} className="bg-gray-50 rounded-2xl p-4 flex justify-between items-center border border-gray-100">
+                                    <div>
+                                        <span className="text-gray-700 font-medium">{o.off_site_date ? new Date(o.off_site_date).toLocaleDateString('th-TH') : '-'}</span>
+                                        <p className="text-sm text-gray-500">สถานที่: {o.destination || '-'} | เหตุผล: {o.purpose || '-'}</p>
+                                    </div>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${o.status === 'approved' ? 'bg-green-100 text-green-700' : o.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{o.status === 'approved' ? 'อนุมัติ' : o.status === 'rejected' ? 'ไม่อนุมัติ' : 'รอตรวจ'}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
