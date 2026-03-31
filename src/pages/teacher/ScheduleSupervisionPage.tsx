@@ -18,6 +18,7 @@ const ScheduleSupervisionPage = () => {
     const [supervisionTime, setSupervisionTime] = useState<Date | null>(null);
     const [note, setNote] = useState('');
     const [saving, setSaving] = useState(false);
+    const [advisorName, setAdvisorName] = useState('อาจารย์');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -34,6 +35,19 @@ const ScheduleSupervisionPage = () => {
             }
         };
         fetchData();
+
+        // ดึงชื่ออาจารย์ — ลอง full_name จาก localStorage ก่อน, ถ้าไม่มีก็ดึงจาก API
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.full_name) {
+            setAdvisorName(user.full_name);
+        } else {
+            // fallback: ดึงจาก /advisor/profile
+            api.get('/advisor/profile').then(res => {
+                const p = res.data;
+                const name = [p.prefix_th, p.first_name_th, p.last_name_th].filter(Boolean).join(' ');
+                setAdvisorName(name || 'อาจารย์');
+            }).catch(() => {});
+        }
     }, []);
 
     const handleStudentChange = async (studentName: string) => {
@@ -92,9 +106,6 @@ const ScheduleSupervisionPage = () => {
             setSaving(false);
         }
     };
-
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const advisorName = user.first_name_th ? `${user.prefix_th || ''} ${user.first_name_th} ${user.last_name_th || ''}` : 'อาจารย์';
 
     return (
         <div className="flex items-center justify-center">

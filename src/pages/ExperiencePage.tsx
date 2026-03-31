@@ -150,8 +150,8 @@ const ExperiencePage = () => {
     };
 
     const handleCreateInternship = async () => {
-        if (!newCompanyId || !newSemesterId || !newStartDate || !newEndDate) {
-            setMessage('กรุณากรอกข้อมูลให้ครบ (สถานประกอบการ, ภาคเรียน, วันเริ่ม-สิ้นสุด)');
+        if (!newCompanyId || !newSemesterId) {
+            setMessage('กรุณาเลือกสถานประกอบการและภาคเรียน');
             return;
         }
         setSaving(true); setMessage('');
@@ -159,14 +159,27 @@ const ExperiencePage = () => {
             await api.post('/student/internship', null, {
                 params: {
                     company_id: Number(newCompanyId), semester_id: Number(newSemesterId),
-                    start_date: newStartDate, end_date: newEndDate,
-                    job_title: newJobTitle || undefined, required_hours: Number(newRequiredHours) || 450,
+                    job_title: newJobTitle || undefined,
+                    required_hours: Number(newRequiredHours) || 450,
                 }
             });
             setMessage('สร้างข้อมูลการฝึกงานสำเร็จ!');
             setTimeout(() => window.location.reload(), 1500);
         } catch (e: any) { setMessage(e.response?.data?.detail || 'เกิดข้อผิดพลาดในการสร้างข้อมูล'); }
         finally { setSaving(false); }
+    };
+
+    // เมื่อเลือกภาคเรียน → ดึงวันที่ฝึกงานอัตโนมัติ
+    const handleSemesterChange = (semId: string) => {
+        setNewSemesterId(semId);
+        const sem = semesters.find((s: any) => String(s.id) === semId);
+        if (sem) {
+            setNewStartDate(sem.internship_start || sem.start_date || '');
+            setNewEndDate(sem.internship_end || sem.end_date || '');
+        } else {
+            setNewStartDate('');
+            setNewEndDate('');
+        }
     };
 
     if (loading) return <div className="text-center py-20 text-gray-400">กำลังโหลด...</div>;
@@ -252,7 +265,7 @@ const ExperiencePage = () => {
                                     </div>
                                     <div>
                                         <label className="block text-base font-bold text-gray-900 mb-2">ภาคเรียน</label>
-                                        <select value={newSemesterId} onChange={e => setNewSemesterId(e.target.value)} className={selectClass} required>
+                                        <select value={newSemesterId} onChange={e => handleSemesterChange(e.target.value)} className={selectClass} required>
                                             <option value="">-- เลือกภาคเรียน --</option>
                                             {semesters.map((s: any) => <option key={s.id} value={s.id}>{s.term}/{s.year} {s.is_current ? '(ปัจจุบัน)' : ''}</option>)}
                                         </select>
@@ -260,11 +273,13 @@ const ExperiencePage = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-base font-bold text-gray-900 mb-2">วันเริ่มฝึกงาน</label>
-                                            <input type="date" value={newStartDate} onChange={e => setNewStartDate(e.target.value)} className={inputClass} required />
+                                            <input type="date" value={newStartDate} readOnly className={`${inputClass} bg-gray-50 text-gray-500 cursor-not-allowed`} />
+                                            <p className="text-xs text-gray-400 mt-1">ดึงจากภาคเรียนอัตโนมัติ</p>
                                         </div>
                                         <div>
                                             <label className="block text-base font-bold text-gray-900 mb-2">วันสิ้นสุดฝึกงาน</label>
-                                            <input type="date" value={newEndDate} onChange={e => setNewEndDate(e.target.value)} className={inputClass} required />
+                                            <input type="date" value={newEndDate} readOnly className={`${inputClass} bg-gray-50 text-gray-500 cursor-not-allowed`} />
+                                            <p className="text-xs text-gray-400 mt-1">ดึงจากภาคเรียนอัตโนมัติ</p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -274,7 +289,8 @@ const ExperiencePage = () => {
                                         </div>
                                         <div>
                                             <label className="block text-base font-bold text-gray-900 mb-2">ชั่วโมงที่ต้องฝึก</label>
-                                            <input type="number" value={newRequiredHours} onChange={e => setNewRequiredHours(e.target.value)} placeholder="450" className={inputClass} />
+                                            <input type="number" value={newRequiredHours} readOnly className={`${inputClass} bg-gray-50 text-gray-500 cursor-not-allowed`} />
+                                            <p className="text-xs text-gray-400 mt-1">กำหนดโดย Admin เท่านั้น</p>
                                         </div>
                                     </div>
                                     <div className="flex justify-end pt-4">

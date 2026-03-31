@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Video, MapPin, Clock, Edit3, ArrowRight } from 'lucide-react';
+import { Clock, Edit3, ArrowRight, X, Save } from 'lucide-react';
 import api from '../../api';
 
 const SupervisionHistoryPage = () => {
@@ -8,32 +8,37 @@ const SupervisionHistoryPage = () => {
     const [students, setStudents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [schedRes, reportRes, studRes] = await Promise.all([
-                    api.get('/advisor/visit-schedules'),
-                    api.get('/advisor/visit-reports'),
-                    api.get('/advisor/students'),
-                ]);
-                setSchedules(schedRes.data.schedules || []);
-                setReports(reportRes.data.reports || []);
-                setStudents(studRes.data.students || []);
-            } catch (err) {
-                console.error('Failed to fetch:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, []);
+    // Edit modal state
+    const [editingItem, setEditingItem] = useState<any>(null);
+    const [editDate, setEditDate] = useState('');
+    const [editTime, setEditTime] = useState('');
+    const [editNotes, setEditNotes] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const fetchData = async () => {
+        try {
+            const [schedRes, reportRes, studRes] = await Promise.all([
+                api.get('/advisor/visit-schedules'),
+                api.get('/advisor/visit-reports'),
+                api.get('/advisor/students'),
+            ]);
+            setSchedules(schedRes.data.schedules || []);
+            setReports(reportRes.data.reports || []);
+            setStudents(studRes.data.students || []);
+        } catch (err) {
+            console.error('Failed to fetch:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchData(); }, []);
 
     // Build student name lookup
     const studentMap: Record<number, string> = {};
     students.forEach(s => { studentMap[s.internship_id] = s.full_name; });
 
-    // Combine schedules and reports into a history list
-    // นับครั้งที่นิเทศต่อนักศึกษาอัตโนมัติ (เรียงตามวันที่ สูงสุด 3 ครั้งต่อนักศึกษา)
+    // Combine schedules into history with visit numbers
     const sortedSchedules = [...schedules].sort((a, b) => {
         const dateA = a.scheduled_date ? new Date(a.scheduled_date).getTime() : 0;
         const dateB = b.scheduled_date ? new Date(b.scheduled_date).getTime() : 0;
@@ -47,37 +52,48 @@ const SupervisionHistoryPage = () => {
             if (!visitCountPerStudent[internId]) visitCountPerStudent[internId] = 0;
             visitCountPerStudent[internId]++;
             const visitNum = visitCountPerStudent[internId];
-
-            // จำกัด 3 ครั้งต่อนักศึกษา
             if (visitNum > 3) return null;
 
             return {
                 id: s.id,
                 date: s.scheduled_date ? new Date(s.scheduled_date).toLocaleDateString('th-TH') : '-',
+                rawDate: s.scheduled_date || '',
                 time: s.scheduled_time || '-',
-                format: 'ออนไลน์',
                 student: studentMap[s.internship_id] || `Internship #${s.internship_id}`,
                 internship_id: s.internship_id,
-                canEdit: s.status_id !== 3,
+                canEdit: true,
                 visitNumber: visitNum,
+                notes: s.notes || '',
             };
         })
         .filter(Boolean)
-        .reverse(); // แสดงล่าสุดก่อน
+        .reverse();
 
-    const getFormatBadge = (format: string) => {
-        if (format === 'ออนไลน์') {
-            return (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-100">
-                    <Video size={14} /> {format}
-                </span>
-            );
+    const handleOpenEdit = (item: any) => {
+        setEditingItem(item);
+        setEditDate(item.rawDate || '');
+        setEditTime(item.time === '-' ? '' : item.time);
+        setEditNotes(item.notes || '');
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingItem) return;
+        setSaving(true);
+        try {
+            await api.put(`/advisor/visit-schedules/${editingItem.id}`, null, {
+                params: {
+                    scheduled_date: editDate || undefined,
+                    scheduled_time: editTime || undefined,
+                    notes: editNotes || undefined,
+                }
+            });
+            setEditingItem(null);
+            await fetchData();
+        } catch (err: any) {
+            alert(err.response?.data?.detail || 'ไม่สามารถแก้ไขได้');
+        } finally {
+            setSaving(false);
         }
-        return (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-600 border border-green-100">
-                <MapPin size={14} /> {format}
-            </span>
-        );
     };
 
     if (loading) {
@@ -105,7 +121,7 @@ const SupervisionHistoryPage = () => {
                     {historyData.length === 0 && (
                         <div className="text-center py-12 text-gray-400">ยังไม่มีประวัติการนิเทศ</div>
                     )}
-                    {historyData.map((item) => (
+                    {historyData.map((item: any) => (
                         <div key={item.id} className="group relative grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-5 bg-white border border-gray-100 rounded-2xl md:rounded-full items-center transition-all duration-300 hover:shadow-lg hover:shadow-blue-900/5 hover:border-blue-100 hover:-translate-y-0.5">
                             <div className="col-span-1 md:col-span-3 flex items-center gap-3">
                                 <div className="flex flex-row items-center gap-3">
@@ -125,7 +141,11 @@ const SupervisionHistoryPage = () => {
                             </div>
                             <div className="col-span-1 md:col-span-3 flex justify-end gap-2 mt-2 md:mt-0 opacity-80 group-hover:opacity-100 transition-opacity">
                                 {item.canEdit && (
-                                    <button className="w-10 h-10 flex items-center justify-center rounded-full bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-colors" title="แก้ไข">
+                                    <button
+                                        onClick={() => handleOpenEdit(item)}
+                                        className="w-10 h-10 flex items-center justify-center rounded-full bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-colors"
+                                        title="แก้ไข"
+                                    >
                                         <Edit3 size={18} />
                                     </button>
                                 )}
@@ -141,6 +161,71 @@ const SupervisionHistoryPage = () => {
                     ))}
                 </div>
             </div>
+
+            {/* ===== Modal แก้ไขวันนิเทศ ===== */}
+            {editingItem && (
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditingItem(null)}>
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="bg-gradient-to-r from-[#4472c4] to-[#032B68] px-8 py-6 text-white flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold">แก้ไขวันนิเทศ</h2>
+                                <p className="text-white/70 text-sm mt-1">{editingItem.student} — ครั้งที่ {editingItem.visitNumber}</p>
+                            </div>
+                            <button onClick={() => setEditingItem(null)} className="p-2 hover:bg-white/20 rounded-xl">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-gray-900 font-bold block text-sm">วันที่นิเทศ</label>
+                                <input
+                                    type="date"
+                                    value={editDate}
+                                    onChange={e => setEditDate(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4472c4]"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-gray-900 font-bold block text-sm">เวลานิเทศ</label>
+                                <input
+                                    type="time"
+                                    value={editTime}
+                                    onChange={e => setEditTime(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4472c4]"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-gray-900 font-bold block text-sm">หมายเหตุ</label>
+                                <textarea
+                                    value={editNotes}
+                                    onChange={e => setEditNotes(e.target.value)}
+                                    rows={3}
+                                    placeholder="เช่น นัดช่วงเช้า"
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4472c4] resize-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setEditingItem(null)}
+                                    className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    onClick={handleSaveEdit}
+                                    disabled={saving}
+                                    className="flex-1 py-3 bg-[#4472c4] hover:bg-[#365fa3] text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    <Save size={18} />
+                                    {saving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

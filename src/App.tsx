@@ -43,6 +43,7 @@ import AdminUserManagementPage from './pages/admin/AdminUserManagementPage';
 import AdminSemesterPage from './pages/admin/AdminSemesterPage';
 import AdminCompanyPage from './pages/admin/AdminCompanyPage';
 import AdminEvaluationPage from './pages/admin/AdminEvaluationPage';
+import AdminInternshipPage from './pages/admin/AdminInternshipPage';
 
 function App() {
     return (
@@ -145,6 +146,7 @@ function App() {
                                 <Route path="semesters" element={<AdminSemesterPage />} />
                                 <Route path="companies" element={<AdminCompanyPage />} />
                                 <Route path="evaluation" element={<AdminEvaluationPage />} />
+                                <Route path="internships" element={<AdminInternshipPage />} />
                             </Route>
                         </Routes>
                     </MainLayout>
