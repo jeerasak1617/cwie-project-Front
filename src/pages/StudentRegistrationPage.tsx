@@ -59,7 +59,7 @@ const StudentRegistrationPage = () => {
                     first_name_th: formData.firstName,
                     last_name_th: formData.lastName,
                     student_code: formData.studentId,
-                    email: `${formData.studentId}@cru.ac.th`,
+                    email: `${formData.studentId}@chandra.ac.th`,
                     department_id: formData.departmentId || undefined,
                 }
             });

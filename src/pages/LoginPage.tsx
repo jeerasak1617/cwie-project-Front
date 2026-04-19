@@ -41,13 +41,11 @@ const LoginPage = () => {
                 try {
                     const { user: userData } = await loginWithToken(lineToken);
                     const role = userData.sys_role || lineRole;
-                    switch (role) {
-                        case 'admin': navigate('/admin'); break;
-                        case 'advisor': navigate('/teacher'); break;
-                        case 'supervisor': navigate('/company'); break;
-                        case 'student': navigate('/time-attendance'); break;
-                        default: navigate('/');
-                    }
+                    let path = '/time-attendance';
+                    if (role === 'admin') path = '/admin';
+                    else if (role === 'advisor') path = '/teacher';
+                    else if (role === 'supervisor') path = '/company';
+                    window.location.replace(path);
                 } catch {
                     setError('เข้าสู่ระบบด้วย LINE ไม่สำเร็จ');
                 } finally {
