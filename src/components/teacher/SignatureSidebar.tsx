@@ -1,5 +1,5 @@
 import { NavLink, useParams } from 'react-router-dom';
-import { FileClock, FileCheck } from 'lucide-react';
+import { FileClock, FileCheck, Users } from 'lucide-react';
 
 const SignatureSidebar = () => {
     const { studentId } = useParams();
@@ -17,6 +17,12 @@ const SignatureSidebar = () => {
             path: `${basePath}/experience`,
             icon: FileCheck,
             color: "text-orange-500"
+        },
+        {
+            label: "ช่องทางติดต่อผู้ปกครอง",
+            path: `${basePath}/guardian`,
+            icon: Users,
+            color: "text-green-500"
         },
     ];
 

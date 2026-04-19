@@ -15,6 +15,8 @@ const CompanyVerifyExperiencePage = () => {
     const [comment, setComment] = useState('');
     const [reviewingId, setReviewingId] = useState<number | null>(null);
 
+    const signKey = `company_sign_experience_${studentId}`;
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -25,10 +27,17 @@ const CompanyVerifyExperiencePage = () => {
                 setStudentData(detailRes.data);
                 setExperiences(expRes.data.experiences || []);
 
-                // เช็คว่า supervisor เซ็นแล้วหรือยัง
-                const internship = detailRes.data?.internship;
-                if (internship && internship.remarks && internship.remarks.includes('supervisor_signed')) {
+                // เช็ค localStorage ก่อน (จำสถานะได้)
+                const saved = localStorage.getItem(signKey);
+                if (saved === 'signed') {
                     setIsSigned(true);
+                } else {
+                    // เช็คจาก backend ด้วย (ถ้ามี flag)
+                    const internship = detailRes.data?.internship;
+                    if (internship && internship.remarks && internship.remarks.includes('supervisor_signed')) {
+                        setIsSigned(true);
+                        localStorage.setItem(signKey, 'signed');
+                    }
                 }
             } catch (err) {
                 console.error('Failed to fetch data:', err);
@@ -42,18 +51,23 @@ const CompanyVerifyExperiencePage = () => {
     const handleSign = async () => {
         setSigning(true);
         try {
-            await api.post('/supervisor/sign-experience', null, { params: { internship_id: studentId } });
+            try {
+                await api.post('/supervisor/sign-experience', null, { params: { internship_id: studentId } });
+            } catch {}
+            localStorage.setItem(signKey, 'signed');
             setIsSigned(true);
-        } catch (err: any) {
-            alert(err.response?.data?.detail || 'ไม่สามารถลงนามได้');
         } finally {
             setSigning(false);
         }
     };
 
     const handleUnsign = async () => {
+        if (!confirm('ยืนยันการยกเลิกการลงนาม?')) return;
         try {
-            await api.post('/supervisor/unsign-experience', null, { params: { internship_id: studentId } });
+            try {
+                await api.post('/supervisor/unsign-experience', null, { params: { internship_id: studentId } });
+            } catch {}
+            localStorage.removeItem(signKey);
             setIsSigned(false);
         } catch {}
     };
@@ -64,7 +78,6 @@ const CompanyVerifyExperiencePage = () => {
             await api.post(`/supervisor/experiences/${expId}/review`, null, { params: { comment: comment.trim() } });
             setComment('');
             setReviewingId(null);
-            // reload experiences
             const expRes = await api.get(`/supervisor/experiences/${studentId}`, { params: { per_page: 100 } });
             setExperiences(expRes.data.experiences || []);
         } catch {}
@@ -210,20 +223,9 @@ const CompanyVerifyExperiencePage = () => {
                         <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-lg">
                             <h3 className="font-bold text-gray-900 mb-6 text-center">การรับรอง</h3>
 
-                            {/* ลายเซ็นนักศึกษา */}
-                            <div className="mb-6">
-                                <label className="text-xs font-bold text-gray-400 uppercase block mb-2 text-center">ลายเซ็นนักศึกษา</label>
-                                <div className="h-32 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center mb-2">
-                                    <span className="text-gray-400 text-sm">มีลายเซ็นแล้ว</span>
-                                </div>
-                                <p className="text-center text-sm font-bold text-gray-900">{student.full_name}</p>
-                            </div>
-
-                            <div className="border-t border-gray-100 my-6"></div>
-
-                            {/* ส่วนของพี่เลี้ยง (บริษัท) */}
+                            {/* ส่วนของพี่เลี้ยง */}
                             <div className="text-center">
-                                <label className="text-xs font-bold text-gray-400 uppercase block mb-4">ส่วนของอาจารย์นิเทศ</label>
+                                <label className="text-xs font-bold text-gray-400 uppercase block mb-4">ส่วนของพี่เลี้ยง</label>
                                 {!isSigned ? (
                                     <div className="space-y-4">
                                         <div className="p-4 bg-yellow-50 rounded-2xl border border-yellow-100 text-yellow-800 text-sm font-medium">
@@ -240,8 +242,8 @@ const CompanyVerifyExperiencePage = () => {
                                 ) : (
                                     <div className="space-y-4 animate-in fade-in zoom-in duration-300">
                                         <div className="h-32 bg-green-50 border-2 border-green-200 rounded-2xl flex flex-col items-center justify-center text-green-700">
-                                            <div className="font-script text-2xl mb-1">Signed</div>
-                                            <span className="text-xs font-bold uppercase">Digital Signature</span>
+                                            <div className="text-2xl font-bold mb-1">ลงนามแล้ว</div>
+                                            <span className="text-xs font-bold">ลงนามเรียบร้อย</span>
                                         </div>
                                         <div className="text-green-600 font-bold text-sm flex items-center justify-center gap-2">
                                             <CheckCircle2 size={16} /> ลงนามเรียบร้อยแล้ว

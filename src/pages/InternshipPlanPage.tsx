@@ -5,6 +5,14 @@ import "react-datepicker/dist/react-datepicker.css";
 import { Link } from 'react-router-dom';
 import api from '../api';
 
+// แปลง Date เป็น YYYY-MM-DD โดยใช้เวลา local (ไม่เลื่อนวันเพราะ timezone)
+const toLocalDateString = (d: Date): string => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+};
+
 const InternshipPlanPage = () => {
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
@@ -23,8 +31,8 @@ const InternshipPlanPage = () => {
             await api.post('/student/internship-plan', null, {
                 params: {
                     task_name: taskName.trim(),
-                    start_date: startDate.toISOString().split('T')[0],
-                    end_date: endDate.toISOString().split('T')[0],
+                    start_date: toLocalDateString(startDate),
+                    end_date: toLocalDateString(endDate),
                     location: place.trim() || undefined,
                     task_description: description.trim() || undefined,
                     planned_hours: plannedHours ? parseInt(plannedHours) : undefined,

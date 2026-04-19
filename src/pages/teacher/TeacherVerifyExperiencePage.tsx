@@ -6,9 +6,11 @@ import api from '../../api';
 const TeacherVerifyExperiencePage = () => {
     const { studentId } = useParams(); // internship_id
     const [isSigned, setIsSigned] = useState(false);
+    const [signing, setSigning] = useState(false);
     const [studentData, setStudentData] = useState<any>(null);
     const [experiences, setExperiences] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const signKey = `teacher_sign_experience_${studentId}`;
 
     useEffect(() => {
         const fetchData = async () => {
@@ -19,6 +21,10 @@ const TeacherVerifyExperiencePage = () => {
                 ]);
                 setStudentData(detailRes.data);
                 setExperiences(expRes.data.experiences || []);
+
+                // โหลดสถานะลงนามจาก localStorage
+                const saved = localStorage.getItem(signKey);
+                if (saved === 'signed') setIsSigned(true);
             } catch (err) {
                 console.error('Failed to fetch data:', err);
             } finally {
@@ -27,6 +33,22 @@ const TeacherVerifyExperiencePage = () => {
         };
         fetchData();
     }, [studentId]);
+
+    const handleSign = async () => {
+        setSigning(true);
+        try {
+            localStorage.setItem(signKey, 'signed');
+            setIsSigned(true);
+        } finally {
+            setSigning(false);
+        }
+    };
+
+    const handleUnsign = () => {
+        if (!confirm('ยืนยันการยกเลิกการลงนาม?')) return;
+        localStorage.removeItem(signKey);
+        setIsSigned(false);
+    };
 
     if (loading) {
         return <div className="flex justify-center items-center h-64 text-gray-500">กำลังโหลดข้อมูล...</div>;
@@ -38,11 +60,6 @@ const TeacherVerifyExperiencePage = () => {
 
     const student = studentData.student || {};
     const internship = studentData.internship || {};
-
-    // Combine experiences into a description
-    const expDescription = experiences.length > 0
-        ? experiences.map(e => `${e.topic || ''}: ${e.description || ''}`).join('\n')
-        : 'ยังไม่มีข้อมูลประสบการณ์';
 
     return (
         <div className="flex flex-col h-full">
@@ -139,14 +156,6 @@ const TeacherVerifyExperiencePage = () => {
                     <div className="sticky top-6">
                         <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-lg">
                             <h3 className="font-bold text-gray-900 mb-6 text-center">การรับรอง</h3>
-                            <div className="mb-6">
-                                <label className="text-xs font-bold text-gray-400 uppercase block mb-2 text-center">ลายเซ็นนักศึกษา</label>
-                                <div className="h-32 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center mb-2">
-                                    <span className="text-gray-400 text-sm">มีลายเซ็นแล้ว</span>
-                                </div>
-                                <p className="text-center text-sm font-bold text-gray-900">{student.full_name}</p>
-                            </div>
-                            <div className="border-t border-gray-100 my-6"></div>
                             <div className="text-center">
                                 <label className="text-xs font-bold text-gray-400 uppercase block mb-4">ส่วนของอาจารย์นิเทศ</label>
                                 {!isSigned ? (
@@ -154,20 +163,20 @@ const TeacherVerifyExperiencePage = () => {
                                         <div className="p-4 bg-yellow-50 rounded-2xl border border-yellow-100 text-yellow-800 text-sm font-medium">
                                             กรุณาตรวจสอบข้อมูลให้ถูกต้องครบถ้วนก่อนลงนาม
                                         </div>
-                                        <button onClick={() => setIsSigned(true)} className="w-full py-3 bg-[#4472c4] hover:bg-[#365fa3] text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95">
-                                            ลงลายเซ็นรับรอง
+                                        <button onClick={handleSign} disabled={signing} className="w-full py-3 bg-[#4472c4] hover:bg-[#365fa3] disabled:bg-gray-400 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95">
+                                            {signing ? 'กำลังลงนาม...' : 'ลงลายเซ็นรับรอง'}
                                         </button>
                                     </div>
                                 ) : (
                                     <div className="space-y-4 animate-in fade-in zoom-in duration-300">
                                         <div className="h-32 bg-green-50 border-2 border-green-200 rounded-2xl flex flex-col items-center justify-center text-green-700">
-                                            <div className="font-script text-2xl mb-1">Signed</div>
-                                            <span className="text-xs font-bold uppercase">Digital Signature</span>
+                                            <div className="text-2xl font-bold mb-1">ลงนามแล้ว</div>
+                                            <span className="text-xs font-bold">ลงนามเรียบร้อย</span>
                                         </div>
                                         <div className="text-green-600 font-bold text-sm flex items-center justify-center gap-2">
                                             <CheckCircle2 size={16} /> ลงนามเรียบร้อยแล้ว
                                         </div>
-                                        <button onClick={() => setIsSigned(false)} className="text-gray-400 hover:text-gray-600 text-sm underline">ยกเลิกการลงนาม</button>
+                                        <button onClick={handleUnsign} className="text-gray-400 hover:text-gray-600 text-sm underline">ยกเลิกการลงนาม</button>
                                     </div>
                                 )}
                             </div>

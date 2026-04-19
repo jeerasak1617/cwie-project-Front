@@ -21,6 +21,7 @@ import SupervisionRecordPage from './pages/teacher/SupervisionRecordPage';
 import TeacherSignatureLayout from './components/layout/TeacherSignatureLayout';
 import TeacherVerifyDailyHistoryPage from './pages/teacher/TeacherVerifyDailyHistoryPage';
 import TeacherVerifyExperiencePage from './pages/teacher/TeacherVerifyExperiencePage';
+import TeacherVerifyGuardianPage from './pages/teacher/TeacherVerifyGuardianPage';
 import TeacherProfilePage from './pages/teacher/TeacherProfilePage';
 import EvaluationPage from './pages/teacher/EvaluationPage';
 import CompanyLayout from './components/layout/CompanyLayout';
@@ -31,6 +32,7 @@ import CompanySignatureLayout from './components/layout/CompanySignatureLayout';
 import CompanyVerifyDailyHistoryPage from './pages/company/CompanyVerifyDailyHistoryPage';
 import CompanyVerifyExperiencePage from './pages/company/CompanyVerifyExperiencePage';
 import CompanyVerifyAttendanceHistoryPage from './pages/company/CompanyVerifyAttendanceHistoryPage';
+import CompanyVerifyGuardianPage from './pages/company/CompanyVerifyGuardianPage';
 import CompanyProfilePage from './pages/company/CompanyProfilePage';
 import CompanyEvaluationDetailPage from './pages/company/CompanyEvaluationDetailPage';
 import StudentRegistrationPage from './pages/StudentRegistrationPage';
@@ -62,7 +64,6 @@ function App() {
                 <PrivateRoute>
                     <MainLayout>
                         <Routes>
-                            {/* หน้าหลัก - ทุก role เข้าได้ */}
                             <Route path="/" element={<HomePage />} />
 
                             {/* === นักศึกษา === */}
@@ -118,6 +119,7 @@ function App() {
                             }>
                                 <Route path="daily" element={<TeacherVerifyDailyHistoryPage />} />
                                 <Route path="experience" element={<TeacherVerifyExperiencePage />} />
+                                <Route path="guardian" element={<TeacherVerifyGuardianPage />} />
                             </Route>
 
                             {/* === พี่เลี้ยง/สถานประกอบการ === */}
@@ -132,6 +134,7 @@ function App() {
                                     <Route path="daily" element={<CompanyVerifyDailyHistoryPage />} />
                                     <Route path="experience" element={<CompanyVerifyExperiencePage />} />
                                     <Route path="history" element={<CompanyVerifyAttendanceHistoryPage />} />
+                                    <Route path="guardian" element={<CompanyVerifyGuardianPage />} />
                                 </Route>
                                 <Route path="profile" element={<CompanyProfilePage />} />
                                 <Route path="evaluation/:studentId" element={<CompanyEvaluationDetailPage />} />
